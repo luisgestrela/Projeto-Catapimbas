@@ -19,13 +19,11 @@ export const encerrarSessao = (res) => res.clearCookie(COOKIE, { path: "/" });
 let permissoesPorPapel = new Map();
 
 export async function carregarPermissoes() {
-  const linhas = await consultar(
-    supabase.from("papel_permissao").select("papel:papel_id(codigo), permissao:permissao_id(codigo)").limit(5000),
-  );
+  const linhas = await consultar(supabase.from("papel_permissao").select("papel_codigo, permissao_codigo").limit(5000));
   permissoesPorPapel = new Map();
   for (const l of linhas) {
-    const papel = l.papel?.codigo;
-    const permissao = l.permissao?.codigo;
+    const papel = l.papel_codigo;
+    const permissao = l.permissao_codigo;
     if (!papel || !permissao) continue;
     if (!permissoesPorPapel.has(papel)) permissoesPorPapel.set(papel, new Set());
     permissoesPorPapel.get(papel).add(permissao);
@@ -33,16 +31,16 @@ export async function carregarPermissoes() {
   if (!permissoesPorPapel.size) console.warn("Aviso: papel_permissao está vazia; todas as rotas protegidas retornarão 403.");
 }
 
-const papelIdPorCodigo = new Map();
+let papeisCadastrados = new Set();
 
-export async function papelId(codigo) {
-  if (!papelIdPorCodigo.size) {
-    const linhas = await consultar(supabase.from("papel").select("id, codigo"));
-    for (const l of linhas) papelIdPorCodigo.set(l.codigo, l.id);
+// vinculo_institucional.papel guarda o código do papel (FK para papel.codigo). Confere se o código existe e o devolve.
+export async function papelValido(codigo) {
+  if (!papeisCadastrados.size) {
+    const linhas = await consultar(supabase.from("papel").select("codigo"));
+    papeisCadastrados = new Set(linhas.map((l) => l.codigo));
   }
-  const id = papelIdPorCodigo.get(codigo);
-  if (!id) throw new ErroHttp(400, "Papel inválido.");
-  return id;
+  if (!papeisCadastrados.has(codigo)) throw new ErroHttp(400, "Papel inválido.");
+  return codigo;
 }
 
 export const temPermissao = (papel, permissao) => !!permissoesPorPapel.get(papel)?.has(permissao);
@@ -57,9 +55,9 @@ export async function autenticar(req, _res, next) {
     } catch {
       throw new ErroHttp(401, "Sessão inválida ou expirada.");
     }
-    const usuario = await consultar(supabase.from("usuario").select("id, nome, email, status, is_superadmin, bloqueado_ate, anonimizado_em").eq("id", payload.sub).maybeSingle());
+    const usuario = await consultar(supabase.from("usuario").select("id, nome, email, status, superadmin, anonimizado_em").eq("id", payload.sub).maybeSingle());
     if (!usuario || usuario.status !== "ativo" || usuario.anonimizado_em) throw new ErroHttp(401, "Sessão inválida ou expirada.");
-    req.usuario = { id: usuario.id, nome: usuario.nome, email: usuario.email, status: usuario.status, superadmin: usuario.is_superadmin };
+    req.usuario = { id: usuario.id, nome: usuario.nome, email: usuario.email, status: usuario.status, superadmin: usuario.superadmin };
     next();
   } catch (e) {
     next(e);
@@ -81,12 +79,12 @@ export async function contexto(req, _res, next) {
       return next();
     }
     const vinculo = await consultar(
-      supabase.from("vinculo_institucional").select("situacao, papel:papel_id(codigo), instituicao:instituicao_id(status)")
+      supabase.from("vinculo_institucional").select("situacao, papel, instituicao:instituicao_id(status)")
         .eq("usuario_id", req.usuario.id).eq("instituicao_id", id).maybeSingle(),
     );
     if (!vinculo || vinculo.situacao !== "ativo" || vinculo.instituicao?.status !== "ativa") throw new ErroHttp(403, "Acesso negado.");
     req.instituicaoId = id;
-    req.papel = vinculo.papel?.codigo ?? null;
+    req.papel = vinculo.papel ?? null;
     next();
   } catch (e) {
     next(e);

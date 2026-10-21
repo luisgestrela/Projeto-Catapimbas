@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { Router } from "express";
-import { abrirSessao, autenticar, conferirSenha, encerrarSessao, gerarHash, papelId } from "../auth.js";
+import { abrirSessao, autenticar, conferirSenha, encerrarSessao, gerarHash, papelValido } from "../auth.js";
 import { config } from "../config.js";
 import { ErroHttp, consultar, supabase } from "../supabase.js";
 import { EMAIL, PAPEIS_SOLICITAVEIS, inteiro, invalido, opcao, texto } from "../validar.js";
@@ -28,8 +28,8 @@ r.post("/login", async (req, res) => {
   const senha = String(req.body?.senha || "");
   const chave = `${req.ip}|${email}`;
   if (bloqueado(chave)) throw new ErroHttp(429, "Muitas tentativas. Aguarde alguns minutos.");
-  const u = EMAIL.test(email) ? await consultar(supabase.from("usuario").select("id, senha_hash, status, bloqueado_ate, anonimizado_em").eq("email", email).maybeSingle()) : null;
-  const confere = await conferirSenha(senha, u?.senha_hash || HASH_FALSO);
+  const u = EMAIL.test(email) ? await consultar(supabase.from("usuario").select("id, hash_senha, status, bloqueado_ate, anonimizado_em").eq("email", email).maybeSingle()) : null;
+  const confere = await conferirSenha(senha, u?.hash_senha || HASH_FALSO);
   if (u?.bloqueado_ate && new Date(u.bloqueado_ate) > new Date()) throw new ErroHttp(429, "Conta temporariamente bloqueada. Tente mais tarde.");
   if (!u || !confere || u.status !== "ativo" || u.anonimizado_em) {
     falhou(chave);
@@ -58,16 +58,16 @@ r.post("/cadastro", async (req, res) => {
   const inst = await consultar(supabase.from("instituicao").select("id").eq("id", instituicaoId).eq("status", "ativa").maybeSingle());
   if (!inst) throw invalido("Instituição inválida.");
 
-  let usuario = await consultar(supabase.from("usuario").select("id, senha_hash, status, bloqueado_ate, anonimizado_em").eq("email", email).maybeSingle());
+  let usuario = await consultar(supabase.from("usuario").select("id, hash_senha, status, bloqueado_ate, anonimizado_em").eq("email", email).maybeSingle());
   if (usuario) {
-    if (!(await conferirSenha(senha, usuario.senha_hash)) || usuario.status !== "ativo") {
+    if (!(await conferirSenha(senha, usuario.hash_senha)) || usuario.status !== "ativo") {
       throw new ErroHttp(409, "Este e-mail já está cadastrado. Informe a senha atual da conta para solicitar o vínculo.");
     }
   } else {
-    usuario = await consultar(supabase.from("usuario").insert({ nome, email, senha_hash: await gerarHash(senha) }).select("id").single());
+    usuario = await consultar(supabase.from("usuario").insert({ nome, email, hash_senha: await gerarHash(senha) }).select("id").single());
   }
 
-  const papelIdSolicitado = await papelId(papel);
+  const papelSolicitado = await papelValido(papel);
   const existente = await consultar(
     supabase.from("vinculo_institucional").select("id, situacao").eq("instituicao_id", instituicaoId).eq("usuario_id", usuario.id).maybeSingle(),
   );
@@ -76,10 +76,10 @@ r.post("/cadastro", async (req, res) => {
   }
   if (existente) {
     await consultar(
-      supabase.from("vinculo_institucional").update({ papel_id: papelIdSolicitado, situacao: "pendente", justificativa: null, solicitado_em: new Date().toISOString(), decidido_em: null, decidido_por: null }).eq("id", existente.id),
+      supabase.from("vinculo_institucional").update({ papel: papelSolicitado, situacao: "pendente", justificativa: null, solicitado_em: new Date().toISOString(), decidido_em: null, decidido_por: null }).eq("id", existente.id),
     );
   } else {
-    await consultar(supabase.from("vinculo_institucional").insert({ instituicao_id: instituicaoId, usuario_id: usuario.id, papel_id: papelIdSolicitado }));
+    await consultar(supabase.from("vinculo_institucional").insert({ instituicao_id: instituicaoId, usuario_id: usuario.id, papel: papelSolicitado }));
   }
   res.status(201).json({ ok: true });
 });
@@ -105,7 +105,7 @@ r.post("/redefinir", async (req, res) => {
   if (senha.length < 8 || senha.length > 72) throw invalido("A senha deve ter entre 8 e 72 caracteres.");
   const reg = await consultar(supabase.from("recuperacao_senha").select("id, usuario_id, expira_em, usado_em").eq("token_hash", hashToken(token)).maybeSingle());
   if (!reg || reg.usado_em || new Date(reg.expira_em) < new Date()) throw invalido("Link inválido ou expirado.");
-  await consultar(supabase.from("usuario").update({ senha_hash: await gerarHash(senha) }).eq("id", reg.usuario_id));
+  await consultar(supabase.from("usuario").update({ hash_senha: await gerarHash(senha) }).eq("id", reg.usuario_id));
   await consultar(supabase.from("recuperacao_senha").update({ usado_em: new Date().toISOString() }).eq("usuario_id", reg.usuario_id).is("usado_em", null));
   res.json({ ok: true });
 });

@@ -32,27 +32,24 @@ export const mapearInstituicao = (i) => ({
 });
 
 const mapearVinculo = (v) => ({
-  instituicaoId: v.instituicao_id, papel: v.papel?.codigo ?? v.papel, situacao: v.situacao, justificativa: v.justificativa || undefined, data: formatarDia(v.solicitado_em),
+  instituicaoId: v.instituicao_id, papel: v.papel, situacao: v.situacao, justificativa: v.justificativa || undefined, data: formatarDia(v.solicitado_em),
 });
 
 export async function vinculosDoUsuario(usuarioId) {
-  const linhas = await buscar("vinculo_institucional", "instituicao_id, situacao, justificativa, solicitado_em, papel:papel_id(codigo)", { usuario_id: usuarioId });
+  const linhas = await buscar("vinculo_institucional", "instituicao_id, situacao, justificativa, solicitado_em, papel", { usuario_id: usuarioId });
   return linhas.filter((v) => v.situacao !== "revogado").map(mapearVinculo);
 }
 
 export async function listarProjetos(inst) {
   const filtro = { instituicao_id: inst };
-  const [projetos, equipes, orientacoes, vinculos, integrantesDb] = await Promise.all([
+  const [projetos, equipes, orientacoes, integrantes] = await Promise.all([
     buscar("projeto", "id, instituicao_id, nome, descricao, ano, semestre, status", filtro),
     buscar("equipe", "id, projeto_id, nome", filtro),
-    buscar("projeto_orientador", "projeto_id, vinculo_id, principal", filtro),
-    buscar("vinculo_institucional", "id, usuario_id", filtro),
-    buscar("equipe_integrante", "equipe_id, vinculo_id, saida_em", filtro),
+    buscar("orientacao", "projeto_id, orientador_id", filtro),
+    buscar("integrante", "equipe_id, usuario_id", filtro),
   ]);
-  const usuarioPorVinculo = new Map(vinculos.map((v) => [v.id, v.usuario_id]));
-  const integrantes = integrantesDb.filter((i) => !i.saida_em).map((i) => ({ equipe_id: i.equipe_id, usuario_id: usuarioPorVinculo.get(i.vinculo_id) }));
   const equipePorProjeto = new Map(equipes.map((e) => [e.projeto_id, e]));
-  const orientadorPorProjeto = new Map(orientacoes.sort((a, b) => Number(a.principal) - Number(b.principal)).map((o) => [o.projeto_id, usuarioPorVinculo.get(o.vinculo_id)]));
+  const orientadorPorProjeto = new Map(orientacoes.map((o) => [o.projeto_id, o.orientador_id]));
   const alunosPorEquipe = agrupar(integrantes, "equipe_id");
   return projetos.map((p) => {
     const eq = equipePorProjeto.get(p.id);
@@ -66,16 +63,18 @@ export async function listarProjetos(inst) {
 
 async function listarInstrumentos(inst) {
   const [instrumentos, criterios] = await Promise.all([
-    buscar("instrumento", "id, instituicao_id, nome", { instituicao_id: inst, arquivado_em: null }),
-    buscar("criterio", "id, instrumento_id, ordem", { instituicao_id: inst, arquivado_em: null }),
+    buscar("instrumento", "id, instituicao_id, nome, arquivado_em", { instituicao_id: inst }),
+    buscar("criterio", "id, instrumento_id, ordem, arquivado_em", { instituicao_id: inst }),
   ]);
+  const instrumentosAtivos = instrumentos.filter((i) => !i.arquivado_em);
+  const criteriosAtivos = criterios.filter((c) => !c.arquivado_em);
   const versoes = await buscar("criterio_versao", "id, criterio_id, versao, titulo, descricao, nota_min, nota_max, peso_sugerido", { instituicao_id: inst });
   const descritores = await buscar("descritor", "criterio_versao_id, nota, texto", { instituicao_id: inst });
   const ultima = new Map();
   for (const v of versoes) if (!ultima.has(v.criterio_id) || ultima.get(v.criterio_id).versao < v.versao) ultima.set(v.criterio_id, v);
   const descPorVersao = agrupar(descritores, "criterio_versao_id");
-  const porInstrumento = agrupar(criterios, "instrumento_id");
-  return instrumentos.map((i) => ({
+  const porInstrumento = agrupar(criteriosAtivos, "instrumento_id");
+  return instrumentosAtivos.map((i) => ({
     id: i.id, instituicaoId: i.instituicao_id, nome: i.nome,
     criterios: (porInstrumento.get(i.id) || []).sort((a, b) => a.ordem - b.ordem).map((c) => ultima.get(c.id)).filter(Boolean).map((v) => ({
       id: v.id, versao: v.versao, titulo: v.titulo, descricao: v.descricao || "", peso: Number(v.peso_sugerido),
@@ -201,11 +200,11 @@ export async function montarEstado(req) {
   if (inst && gerencia) db.instrumentos = await listarInstrumentos(inst);
   if (inst && temPermissao(papel, "auditoria:ver")) {
     const regs = await consultar(
-      supabase.from("auditoria").select("id, instituicao_id, operacao, tabela, entidade_id, motivo, criado_em, ator:ator_usuario_id(nome)").eq("instituicao_id", inst).order("criado_em", { ascending: false }).limit(500),
+      supabase.from("auditoria").select("id, instituicao_id, operacao, entidade, detalhes, ator_nome, criado_em").eq("instituicao_id", inst).order("criado_em", { ascending: false }).limit(500),
     );
     db.auditoria = regs.map((r) => ({
       id: r.id, instituicaoId: r.instituicao_id, data: formatarDataHora(r.criado_em), iso: isoDia(r.criado_em),
-      ator: r.ator?.nome ?? "—", operacao: r.operacao, entidade: r.entidade_id ?? r.tabela, detalhes: r.motivo ?? "",
+      ator: r.ator_nome ?? "—", operacao: r.operacao, entidade: r.entidade ?? "", detalhes: r.detalhes ?? "",
     }));
   }
 

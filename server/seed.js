@@ -1,4 +1,4 @@
-import { gerarHash, papelId } from "./auth.js";
+import { gerarHash, papelValido } from "./auth.js";
 import { dadosDaBanca } from "./ranking.js";
 import { consultar, rpc, supabase } from "./supabase.js";
 
@@ -34,16 +34,15 @@ const PESSOAS = [
   ["Prof. Henrique Dias", "henrique@demo.com", [v(1, "orientador")]],
 ];
 const usuarios = await consultar(supabase.from("usuario").insert(
-  PESSOAS.map(([nome, email, , superadmin]) => ({ nome, email, senha_hash: hash, is_superadmin: !!superadmin })),
+  PESSOAS.map(([nome, email, , superadmin]) => ({ nome, email, hash_senha: hash, superadmin: !!superadmin })),
 ).select("id, email"));
 const U = {};
 PESSOAS.forEach(([, email], i) => { U[i + 1] = usuarios.find((u) => u.email === email).id; });
 
-const PAPEL_ID = {};
-for (const c of ["administrador", "coordenador", "orientador", "avaliador", "aluno"]) PAPEL_ID[c] = await papelId(c);
+for (const c of ["administrador", "coordenador", "orientador", "avaliador", "aluno"]) await papelValido(c);
 await consultar(supabase.from("vinculo_institucional").insert(
   PESSOAS.flatMap(([, , vs], i) => vs.map((x) => ({
-    instituicao_id: I[x.inst], usuario_id: U[i + 1], papel_id: PAPEL_ID[x.papel], situacao: x.situacao, justificativa: x.justificativa,
+    instituicao_id: I[x.inst], usuario_id: U[i + 1], papel: x.papel, situacao: x.situacao, justificativa: x.justificativa,
     decidido_em: x.situacao === "ativo" ? new Date().toISOString() : null, decidido_por: x.situacao === "ativo" ? U[2] : null,
   }))),
 ));

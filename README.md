@@ -97,7 +97,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 
 ### 1. Criar o banco
 
-No projeto Supabase, abra **SQL Editor**, cole e execute `supabase/migrations/20261021000000_schema.sql` (ou use `supabase db push` com a CLI). A migração cria tabelas, restrições (PK, FK compostas com `instituicao_id`, UNIQUE, CHECK), índices, gatilhos, funções transacionais (`salvar_projeto`, `salvar_banca`, `salvar_criterio`, `enviar_avaliacao`, `corrigir_nota`, `publicar_resultado`), papéis/permissões iniciais e habilita RLS em todas as tabelas sem políticas para `anon`/`authenticated`. Somente a API, com a chave `service_role`, acessa os dados.
+No projeto Supabase, abra **SQL Editor** e execute, **nesta ordem**, `supabase/migrations/20261021000000_schema.sql` e `supabase/migrations/20261021000100_backend_colunas.sql` (ou use `supabase db push` com a CLI, que aplica todas na ordem do nome do arquivo). A segunda migração é aditiva e idempotente: só adiciona colunas usadas pelo backend (`usuario.ultimo_login_em`, `tentativas_login_falhas`, `bloqueado_ate`, `anonimizado_em` e `auditoria.ip`). A migração cria tabelas, restrições (PK, FK compostas com `instituicao_id`, UNIQUE, CHECK), índices, gatilhos, funções transacionais (`salvar_projeto`, `salvar_banca`, `salvar_criterio`, `enviar_avaliacao`, `corrigir_nota`, `publicar_resultado`), papéis/permissões iniciais e habilita RLS em todas as tabelas sem políticas para `anon`/`authenticated`. Somente a API, com a chave `service_role`, acessa os dados.
 
 ### 2. Configurar variáveis
 
@@ -135,6 +135,14 @@ npm test
 ```
 
 Cobrem sessão ausente, CSRF, conta pendente, troca de instituição e de ID, permissões por papel, avaliação duplicada, avaliador não designado e nota fora da escala.
+
+### 6. Teste de compatibilidade SQL ↔ backend (sem banco)
+
+```bash
+npm run test:schema
+```
+
+Lê `supabase/migrations/*.sql` e confere se toda tabela, coluna, relacionamento (`papel:...(...)`), função RPC (nome e parâmetros), erro de negócio, papel e permissão usados pelo backend existe no SQL. Roda sem rede, sem `.env` e sem `npm install`. É uma análise estática: não executa SQL, então complementa (não substitui) o `npm test` da seção anterior. Rode-o sempre que alterar uma migração ou uma consulta do servidor.
 
 ### Modelo de segurança
 

@@ -37,19 +37,22 @@ const ERROS_NEGOCIO = {
   nao_encontrado: [404, "Registro não encontrado."],
 };
 
+// SQLSTATE de dados rejeitados pelo banco: FK (23503), CHECK (23514), formato (22P02), faixa numérica (22003) e data/hora inválida (22007, 22008).
+const CODIGOS_DADOS_INVALIDOS = ["23503", "23514", "22P02", "22003", "22007", "22008"];
+
 export function converterErro(error) {
   const [status, mensagem] = ERROS_NEGOCIO[error?.message] || [];
   if (status) return new ErroHttp(status, mensagem);
   if (error?.code === "23505") return new ErroHttp(409, "Registro duplicado.");
   if (error?.code === "42501" || error?.code === "PGRST301") return new ErroHttp(500, "Erro de permissão no banco. Verifique a SUPABASE_SERVICE_ROLE_KEY.");
-  if (error?.code === "23503" || error?.code === "23514" || error?.code === "22P02") return new ErroHttp(400, "Dados inválidos.");
+  if (CODIGOS_DADOS_INVALIDOS.includes(error?.code)) return new ErroHttp(400, "Dados inválidos.");
   return new ErroHttp(500, "Erro interno.");
 }
 
 export async function consultar(promessa) {
   const { data, error } = await promessa;
   if (error) {
-    if (!ERROS_NEGOCIO[error.message] && !["23505", "23503", "23514", "22P02"].includes(error.code)) console.error("supabase:", error.code, error.message);
+    if (!ERROS_NEGOCIO[error.message] && error.code !== "23505" && !CODIGOS_DADOS_INVALIDOS.includes(error.code)) console.error("supabase:", error.code, error.message);
     throw converterErro(error);
   }
   return data;

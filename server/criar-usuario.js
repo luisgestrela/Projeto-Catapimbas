@@ -1,7 +1,7 @@
 // Uso: npm run usuario -- <email> <senha> ["Nome"] [--superadmin] [--inst <identificador> --papel <codigo>]
 // Cria o usuário ou redefine a senha (e reativa a conta) se o e-mail já existir.
 // Com --inst e --papel, cria/atualiza também o vínculo ATIVO com a instituição.
-import { gerarHash, papelId } from "./auth.js";
+import { gerarHash, papelValido } from "./auth.js";
 import { consultar, supabase } from "./supabase.js";
 
 const argv = process.argv.slice(2);
@@ -21,16 +21,16 @@ if (!email || !senha || senha.length < 8 || (!!inst !== !!papel)) {
   console.error('Uso: npm run usuario -- <email> <senha 8+> ["Nome"] [--superadmin] [--inst <identificador> --papel <administrador|coordenador|orientador|avaliador|aluno>]');
   process.exitCode = 1;
 } else {
-  const senha_hash = await gerarHash(senha);
+  const hash_senha = await gerarHash(senha);
   let usuario = await consultar(supabase.from("usuario").select("id").eq("email", email).maybeSingle());
   if (usuario) {
     await consultar(supabase.from("usuario").update({
-      senha_hash, status: "ativo", bloqueado_ate: null, tentativas_login_falhas: 0, anonimizado_em: null,
-      ...(superadmin ? { is_superadmin: true } : {}),
+      hash_senha, status: "ativo", bloqueado_ate: null, tentativas_login_falhas: 0, anonimizado_em: null,
+      ...(superadmin ? { superadmin: true } : {}),
     }).eq("id", usuario.id));
     console.log(`Usuário ${email} atualizado (id ${usuario.id}). Senha redefinida.`);
   } else {
-    usuario = await consultar(supabase.from("usuario").insert({ nome, email, senha_hash, is_superadmin: superadmin }).select("id").single());
+    usuario = await consultar(supabase.from("usuario").insert({ nome, email, hash_senha, superadmin }).select("id").single());
     console.log(`Usuário ${email} criado (id ${usuario.id})${superadmin ? " como superadmin" : ""}.`);
   }
 
@@ -38,7 +38,7 @@ if (!email || !senha || senha.length < 8 || (!!inst !== !!papel)) {
     const i = await consultar(supabase.from("instituicao").select("id").eq("identificador", inst).maybeSingle());
     if (!i) { console.error(`Instituição "${inst}" não encontrada.`); process.exitCode = 1; }
     else {
-      const campos = { papel_id: await papelId(papel), situacao: "ativo", justificativa: null, decidido_em: new Date().toISOString(), decidido_por: usuario.id };
+      const campos = { papel: await papelValido(papel), situacao: "ativo", justificativa: null, decidido_em: new Date().toISOString(), decidido_por: usuario.id };
       const v = await consultar(supabase.from("vinculo_institucional").select("id").eq("instituicao_id", i.id).eq("usuario_id", usuario.id).maybeSingle());
       if (v) await consultar(supabase.from("vinculo_institucional").update(campos).eq("id", v.id));
       else await consultar(supabase.from("vinculo_institucional").insert({ instituicao_id: i.id, usuario_id: usuario.id, ...campos }));

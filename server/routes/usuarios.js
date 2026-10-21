@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { auditar } from "../auditoria.js";
-import { exigeInstituicao, exigePermissao, papelId } from "../auth.js";
+import { exigeInstituicao, exigePermissao, papelValido } from "../auth.js";
 import { ErroHttp, consultar, supabase } from "../supabase.js";
 import { PAPEIS, inteiro, invalido, opcao, texto } from "../validar.js";
 
@@ -11,7 +11,7 @@ const nomeDe = async (id) => (await consultar(supabase.from("usuario").select("n
 
 const vinculoDe = async (req, usuarioId, situacoes) => {
   const v = await consultar(
-    supabase.from("vinculo_institucional").select("id, situacao, papel:papel_id(codigo)").eq("instituicao_id", req.instituicaoId).eq("usuario_id", usuarioId).maybeSingle(),
+    supabase.from("vinculo_institucional").select("id, situacao, papel").eq("instituicao_id", req.instituicaoId).eq("usuario_id", usuarioId).maybeSingle(),
   );
   if (!v || (situacoes && !situacoes.includes(v.situacao))) throw new ErroHttp(404, "Vínculo não encontrado.");
   return v;
@@ -28,7 +28,7 @@ r.post("/:usuarioId/aprovar", async (req, res) => {
   const usuarioId = inteiro(req.params.usuarioId, "usuarioId");
   const v = await vinculoDe(req, usuarioId, ["pendente"]);
   await atualizar(req, v.id, { situacao: "ativo", justificativa: null, decidido_em: new Date().toISOString(), decidido_por: req.usuario.id });
-  await auditar(req, req.instituicaoId, "aprovacao", await nomeDe(usuarioId), `Aprovado como ${v.papel?.codigo}`);
+  await auditar(req, req.instituicaoId, "aprovacao", await nomeDe(usuarioId), `Aprovado como ${v.papel}`);
   res.json({ ok: true });
 });
 
@@ -46,8 +46,8 @@ r.patch("/:usuarioId/papel", async (req, res) => {
   naoProprio(req, usuarioId);
   const novo = opcao(req.body?.papel, "papel", PAPEIS);
   const v = await vinculoDe(req, usuarioId, ["ativo", "bloqueado"]);
-  await atualizar(req, v.id, { papel_id: await papelId(novo) });
-  await auditar(req, req.instituicaoId, "permissao", await nomeDe(usuarioId), `Papel de ${v.papel?.codigo} para ${novo}`);
+  await atualizar(req, v.id, { papel: await papelValido(novo) });
+  await auditar(req, req.instituicaoId, "permissao", await nomeDe(usuarioId), `Papel de ${v.papel} para ${novo}`);
   res.json({ ok: true });
 });
 
