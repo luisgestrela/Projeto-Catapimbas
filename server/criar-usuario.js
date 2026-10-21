@@ -1,12 +1,9 @@
-// Uso: npm run usuario -- <email> <senha> ["Nome"] [--superadmin] [--inst <identificador> --papel <codigo>]
-// Cria o usuário ou redefine a senha (e reativa a conta) se o e-mail já existir.
-// Com --inst e --papel, cria/atualiza também o vínculo ATIVO com a instituição.
 import { gerarHash, papelValido } from "./auth.js";
 import { consultar, supabase } from "./supabase.js";
 
 const argv = process.argv.slice(2);
 const opcao = (nome) => { const i = argv.indexOf(`--${nome}`); return i >= 0 ? argv[i + 1] : undefined; };
-const is_superadmin = argv.includes("--is_superadmin");
+const superadmin = argv.includes("--superadmin");
 const pos = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === "--inst" || argv[i] === "--papel") i++;
@@ -18,20 +15,20 @@ const inst = opcao("inst");
 const papel = opcao("papel");
 
 if (!email || !senha || senha.length < 8 || (!!inst !== !!papel)) {
-  console.error('Uso: npm run usuario -- <email> <senha 8+> ["Nome"] [is_superadmin] [--inst <identificador> --papel <administrador|coordenador|orientador|avaliador|aluno>]');
+  console.error('Uso: npm run usuario -- <email> <senha 8+> ["Nome"] [--superadmin] [--inst <identificador> --papel <administrador|coordenador|orientador|avaliador|aluno>]');
   process.exitCode = 1;
 } else {
-  const senha_hash = await gerarHash(senha);
+  const hash_senha = await gerarHash(senha);
   let usuario = await consultar(supabase.from("usuario").select("id").eq("email", email).maybeSingle());
   if (usuario) {
     await consultar(supabase.from("usuario").update({
-      senha_hash, status: "ativo", bloqueado_ate: null, tentativas_login_falhas: 0, anonimizado_em: null,
-      ...(is_superadmin ? { is_superadmin: true } : {}),
+      hash_senha, status: "ativo", bloqueado_ate: null, tentativas_login_falhas: 0, anonimizado_em: null,
+      ...(superadmin ? { superadmin: true } : {}),
     }).eq("id", usuario.id));
     console.log(`Usuário ${email} atualizado (id ${usuario.id}). Senha redefinida.`);
   } else {
-    usuario = await consultar(supabase.from("usuario").insert({ nome, email, senha_hash, is_superadmin }).select("id").single());
-    console.log(`Usuário ${email} criado (id ${usuario.id})${is_superadmin ? " como is_superadmin" : ""}.`);
+    usuario = await consultar(supabase.from("usuario").insert({ nome, email, hash_senha, superadmin }).select("id").single());
+    console.log(`Usuário ${email} criado (id ${usuario.id})${superadmin ? " como superadmin" : ""}.`);
   }
 
   if (inst) {
