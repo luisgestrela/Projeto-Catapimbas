@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { PageHeader, Card, Badge, Button, DataTable, StatCard, ChartCard } from "../../components";
 
 const MEDALHA = { 1: "Ouro", 2: "Prata", 3: "Bronze" };
@@ -23,16 +22,6 @@ export default function ResultadosPage({ banca = {}, ranking = [], notas = [], c
         <span className="score-bar" aria-hidden="true"><i style={{ width: `${max ? (Number(r.pontuacao) / max) * 100 : 0}%` }} /></span>
       </div>
     ) },
-=======
-import { PageHeader, Card, Badge, Button, DataTable } from "../../components";
-
-export default function ResultadosPage({ banca = {}, ranking = [], notas = [], criterioDesempate, podeGerenciar = false, onExportar, onPublicar, onAbrirPodio }) {
-  const publicado = banca.resultado === "publicado";
-  const colunasRanking = [
-    { key: "posicao", header: "Posição", render: (r) => `${r.posicao}º` },
-    { key: "projeto", header: "Projeto" },
-    { key: "pontuacao", header: "Pontuação", numeric: true, render: (r) => Number(r.pontuacao).toFixed(2) },
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
     { key: "avaliacoes", header: "Avaliações válidas" },
     { key: "empate", header: "", render: (r) => r.empatado && <Badge status="empate">Empate</Badge> },
   ];
@@ -41,17 +30,13 @@ export default function ResultadosPage({ banca = {}, ranking = [], notas = [], c
     { key: "avaliador", header: "Avaliador" },
     { key: "criterio", header: "Critério" },
     { key: "nota", header: "Nota" },
-<<<<<<< HEAD
     ...(podeGerenciar ? [{ key: "acoes", header: "", render: (n) => <Button variant="secondary" size="sm" onClick={() => onEditarNota?.(n)}>Corrigir</Button> }] : []),
-=======
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
   ];
   return (
     <>
       <PageHeader title={`Resultados — ${banca.nome || ""}`}
         subtitle={criterioDesempate ? `Desempate: ${criterioDesempate}` : undefined}
         actions={<>
-<<<<<<< HEAD
           <Button variant="secondary" onClick={onExportar}>Exportar Excel (.xlsx)</Button>
           <Button variant="secondary" onClick={onAbrirPodio} disabled={ranking.length === 0}>Ver pódio</Button>
           {podeGerenciar && !publicado && <Button onClick={onPublicar}>Publicar resultado</Button>}
@@ -72,18 +57,6 @@ export default function ResultadosPage({ banca = {}, ranking = [], notas = [], c
       )}
       <Card title="Notas lançadas">
         <DataTable columns={colunasNotas} rows={notas} rowKey="chave" emptyTitle="Nenhuma nota registrada" />
-=======
-          <Button variant="secondary" onClick={onExportar}>Exportar Excel</Button>
-          <Button variant="secondary" onClick={onAbrirPodio} disabled={ranking.length === 0}>Ver pódio</Button>
-          {podeGerenciar && !publicado && <Button onClick={onPublicar}>Publicar resultado</Button>}
-        </>} />
-      <Card title="Ranking" icon="ranking" actions={<Badge status={publicado ? "publicado" : "rascunho"} />}>
-        {!publicado && <p className="muted">Resultado em rascunho: ainda não está visível ao público.</p>}
-        <DataTable columns={colunasRanking} rows={ranking} rowKey="projetoId" emptyTitle="Ainda não há avaliações válidas" />
-      </Card>
-      <Card title="Notas lançadas">
-        <DataTable columns={colunasNotas} rows={notas} emptyTitle="Nenhuma nota registrada" />
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
       </Card>
     </>
   );

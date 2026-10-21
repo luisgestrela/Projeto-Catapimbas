@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import Icon from "./Icon";
 import { CountUp } from "./Motion";
 
@@ -12,14 +11,6 @@ export default function StatCard({ label, value, hint, icon, tone = "primary" })
         <strong><CountUp value={value ?? 0} /></strong>
         {hint && <div className="field-hint">{hint}</div>}
       </div>
-=======
-export default function StatCard({ label, value, hint }) {
-  return (
-    <div className="stat">
-      <strong>{value ?? 0}</strong>
-      <span>{label}</span>
-      {hint && <div className="field-hint">{hint}</div>}
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
     </div>
   );
 }

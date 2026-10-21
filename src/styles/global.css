@@ -315,7 +315,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
   .podium-stage .podium-col { opacity: 1; }
 }
-<<<<<<< HEAD
 
 
 /* ==========================================================================
@@ -521,5 +520,3 @@ body.modo-palco .topbar, body.modo-palco .sidebar, body.modo-palco .scroll-progr
 .podio-palco .podium-col:hover .podium-block, .podio-palco .podium-col:hover .podium-avatar { transform: none; filter: none; }
 .podio-palco .podium-col:hover .podium-name { letter-spacing: normal; }
 @media (prefers-reduced-motion: reduce) { .podium-vinheta { animation: none; } }
-=======
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5

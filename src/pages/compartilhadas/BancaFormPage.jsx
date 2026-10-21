@@ -1,20 +1,12 @@
 import { useState } from "react";
 import { PageHeader, Card, Input, Select, Button } from "../../components";
 
-<<<<<<< HEAD
 export default function BancaFormPage({ inicial = {}, projetos = [], avaliadores = [], instrumentos = [], avaliacoesExistentes = false, erros = {}, onSubmit, onCancelar }) {
   const [f, setF] = useState({
     nome: inicial.nome || "", inicio: inicial.inicio || "", fim: inicial.fim || "", instrumentoId: inicial.instrumentoId || "",
     projetosIds: inicial.projetosIds || [], avaliadoresIds: inicial.avaliadoresIds || [], pesos: inicial.pesos || {},
   });
   const instrumento = instrumentos.find((i) => String(i.id) === String(f.instrumentoId));
-=======
-export default function BancaFormPage({ inicial = {}, projetos = [], avaliadores = [], instrumentos = [], erros = {}, onSubmit, onCancelar }) {
-  const [f, setF] = useState({
-    nome: inicial.nome || "", inicio: inicial.inicio || "", fim: inicial.fim || "", instrumentoId: inicial.instrumentoId || "",
-    projetosIds: inicial.projetosIds || [], avaliadoresIds: inicial.avaliadoresIds || [],
-  });
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const alternar = (campo, id) =>
     setF({ ...f, [campo]: f[campo].includes(id) ? f[campo].filter((x) => x !== id) : [...f[campo], id] });
@@ -43,7 +35,6 @@ export default function BancaFormPage({ inicial = {}, projetos = [], avaliadores
           </div>
           <Select label="Instrumento de avaliação" name="instrumentoId" placeholder="Selecione" value={f.instrumentoId} onChange={set("instrumentoId")}
             options={instrumentos.map((i) => ({ value: i.id, label: i.nome }))} required />
-<<<<<<< HEAD
           {instrumento && (
             <fieldset>
               <legend><strong>Pesos dos critérios nesta banca</strong></legend>
@@ -56,8 +47,6 @@ export default function BancaFormPage({ inicial = {}, projetos = [], avaliadores
               </div>
             </fieldset>
           )}
-=======
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
           {lista("Projetos participantes", projetos, "projetosIds")}
           {lista("Avaliadores designados", avaliadores, "avaliadoresIds")}
           <div className="row">

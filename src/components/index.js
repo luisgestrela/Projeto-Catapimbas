@@ -21,7 +21,4 @@ export { default as Select } from "./Select";
 export { default as Sidebar } from "./Sidebar";
 export { default as StatCard } from "./StatCard";
 export { default as Textarea } from "./Textarea";
-<<<<<<< HEAD
 export { default as MotionRoot, SplitText, CountUp } from "./Motion";
-=======
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5

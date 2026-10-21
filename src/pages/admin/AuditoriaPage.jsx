@@ -5,13 +5,10 @@ const OPERACOES = [
   { value: "aprovacao", label: "Aprovação de usuário" },
   { value: "nota", label: "Alteração de nota" },
   { value: "permissao", label: "Mudança de permissão" },
-<<<<<<< HEAD
   { value: "projeto", label: "Projeto" },
   { value: "banca", label: "Banca" },
   { value: "criterio", label: "Critério" },
   { value: "instituicao", label: "Instituição" },
-=======
->>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 ];
 
 export default function AuditoriaPage({ registros = [], pagina = 1, totalPaginas = 1, onFiltrar, onPagina }) {
