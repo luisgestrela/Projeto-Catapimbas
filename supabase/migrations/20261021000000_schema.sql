@@ -38,9 +38,9 @@ create table usuario (
   id bigint generated always as identity primary key,
   nome varchar not null,
   email varchar not null,
-  hash_senha text not null,
+  senha_hash text not null,
   status status_usuario not null default 'ativo',
-  superadmin boolean not null default false,
+ is_superadmin boolean not null default false,
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now()
 );
