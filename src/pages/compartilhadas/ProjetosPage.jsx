@@ -3,6 +3,7 @@ import { PageHeader, FilterBar, Input, Select, DataTable, Badge, Button, Paginat
 
 const VAZIO = { nome: "", orientador: "", equipe: "", aluno: "", ano: "", semestre: "", instituicaoId: "", ordenarPor: "nome" };
 
+<<<<<<< HEAD
 export default function ProjetosPage({ projetos = [], instituicoes, pagina = 1, totalPaginas = 1, podeCriar = false, onFiltrar, onPagina, onNovo, onAbrir, onExportar, totalFiltrado = 0 }) {
   const [f, setF] = useState(VAZIO);
   const [sel, setSel] = useState([]);
@@ -10,6 +11,12 @@ export default function ProjetosPage({ projetos = [], instituicoes, pagina = 1, 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const colunas = [
     { key: "sel", header: "", render: (p) => <input type="checkbox" aria-label={`Selecionar ${p.nome}`} checked={sel.includes(p.id)} onChange={() => alternar(p.id)} /> },
+=======
+export default function ProjetosPage({ projetos = [], instituicoes, pagina = 1, totalPaginas = 1, podeCriar = false, onFiltrar, onPagina, onNovo, onAbrir }) {
+  const [f, setF] = useState(VAZIO);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const colunas = [
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
     { key: "nome", header: "Projeto", render: (p) => <button className="btn btn-ghost btn-sm" onClick={() => onAbrir?.(p)}>{p.nome}</button> },
     { key: "orientador", header: "Orientador" },
     { key: "equipe", header: "Equipe" },
@@ -18,12 +25,16 @@ export default function ProjetosPage({ projetos = [], instituicoes, pagina = 1, 
   ];
   return (
     <>
+<<<<<<< HEAD
       <PageHeader title="Projetos" subtitle="Consulte, filtre e acompanhe os projetos." actions={<>
         <Button variant="secondary" onClick={() => onExportar?.(sel)} disabled={totalFiltrado === 0}>
           {sel.length ? `Exportar Excel (${sel.length} selecionados)` : `Exportar Excel (${totalFiltrado} filtrados)`}
         </Button>
         {podeCriar && <Button onClick={onNovo}>Novo projeto</Button>}
       </>} />
+=======
+      <PageHeader title="Projetos" subtitle="Consulte, filtre e acompanhe os projetos." actions={podeCriar && <Button onClick={onNovo}>Novo projeto</Button>} />
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
       <FilterBar onSubmit={() => onFiltrar?.(f)} onClear={() => { setF(VAZIO); onFiltrar?.(VAZIO); }}>
         <Input label="Nome" name="nome" value={f.nome} onChange={set("nome")} />
         <Input label="Orientador" name="orientador" value={f.orientador} onChange={set("orientador")} />

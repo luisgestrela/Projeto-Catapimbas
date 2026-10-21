@@ -1,9 +1,16 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, EmptyState, PageHeader } from "../components";
 import * as P from "../pages";
 import { baixarXlsx } from "../utils/xlsx";
 import { obterAudio } from "../utils/musica";
+=======
+import { useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Button, EmptyState, PageHeader } from "../components";
+import * as P from "../pages";
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 import { HOME, ROTULO_PAPEL, CRITERIO_DESEMPATE, calcularRanking, periodoBanca, statusBanca, useApp } from "../state/AppContext";
 
 const TAM_PAGINA = 5;
@@ -150,7 +157,11 @@ export function Criterios() {
     onNovoInstrumento={() => { const n = window.prompt("Nome do novo instrumento:"); if (n?.trim()) app.novoInstrumento(n.trim()); }} />;
 }
 
+<<<<<<< HEAD
 const OPERACOES = { aprovacao: "Aprovação de usuário", nota: "Alteração de nota", permissao: "Mudança de permissão", projeto: "Projeto", banca: "Banca", criterio: "Critério", instituicao: "Instituição" };
+=======
+const OPERACOES = { aprovacao: "Aprovação de usuário", nota: "Alteração de nota", permissao: "Mudança de permissão" };
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 const TAM_AUDITORIA = 8;
 export function Auditoria() {
   const app = useApp();
@@ -201,6 +212,7 @@ export function Projetos() {
   const total = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
   const atual = Math.min(pagina, total);
   const linhas = lista.slice((atual - 1) * TAM_PAGINA, atual * TAM_PAGINA).map((p) => ({ ...p, orientador: nomeUsuario(db, p.orientadorId) }));
+<<<<<<< HEAD
   const exportar = (ids) => {
     const alvo = ids?.length ? lista.filter((p) => ids.includes(p.id)) : lista;
     const nomeInst = (id) => db.instituicoes.find((i) => i.id === id)?.nome ?? "";
@@ -210,6 +222,9 @@ export function Projetos() {
     ] }]);
   };
   return <P.ProjetosPage projetos={linhas} pagina={atual} totalPaginas={total} onExportar={exportar} totalFiltrado={lista.length}
+=======
+  return <P.ProjetosPage projetos={linhas} pagina={atual} totalPaginas={total}
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
     instituicoes={papel === "superadmin" ? db.instituicoes : undefined}
     podeCriar={["administrador", "coordenador", "orientador"].includes(papel)}
     onFiltrar={(v) => { setF(v); setPagina(1); }} onPagina={setPagina}
@@ -273,7 +288,11 @@ export function BancaDetalhe() {
       nome: nomeUsuario(db, uid), total: b.projetosIds.length,
       avaliados: db.avaliacoes.filter((a) => a.bancaId === b.id && a.avaliadorId === uid).length,
     })),
+<<<<<<< HEAD
     criterios: (inst?.criterios || []).map((c) => ({ ...c, peso: Number(b.pesos?.[c.id]) > 0 ? Number(b.pesos[c.id]) : c.peso })),
+=======
+    criterios: inst?.criterios || [],
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
   };
   return <P.BancaDetalhePage banca={banca} podeEditar={gerencia(app.papel)} onVoltar={() => nav("/bancas")}
     onEditar={() => nav(`/bancas/${b.id}/editar`)} onVerResultados={() => nav(`/bancas/${b.id}/resultados`)} />;
@@ -291,7 +310,10 @@ export function BancaForm() {
     projetos={db.projetos.filter((p) => p.instituicaoId === instId && (p.status === "ativo" || existente?.projetosIds.includes(p.id))).map(({ id: i, nome }) => ({ id: i, nome }))}
     avaliadores={comPapelNaInst(db, instId, "avaliador").map(({ id: i, nome }) => ({ id: i, nome }))}
     instrumentos={db.instrumentos.filter((i) => i.instituicaoId === instId)}
+<<<<<<< HEAD
     avaliacoesExistentes={existente ? db.avaliacoes.some((a) => a.bancaId === existente.id) : false}
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
     onCancelar={() => nav(existente ? `/bancas/${existente.id}` : "/bancas")}
     onSubmit={(f) => {
       if (f.fim < f.inicio) return setErros({ fim: "O fim não pode ser anterior ao início." });
@@ -301,6 +323,7 @@ export function BancaForm() {
     }} />;
 }
 
+<<<<<<< HEAD
 function exportarExcel(banca, ranking, notas) {
   baixarXlsx(`resultados-${banca.nome.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, [
     { nome: "Ranking", linhas: [
@@ -312,6 +335,20 @@ function exportarExcel(banca, ranking, notas) {
       ...notas.map((n) => [n.projeto, n.avaliador, n.criterio, n.peso, n.nota]),
     ] },
   ]);
+=======
+function exportarCsv(banca, ranking, notas) {
+  const linha = (xs) => xs.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(";");
+  const csv = [
+    linha(["Posição", "Projeto", "Pontuação", "Avaliações válidas"]),
+    ...ranking.map((r) => linha([`${r.posicao}º`, r.projeto, r.pontuacao.toFixed(2).replace(".", ","), r.avaliacoes])),
+    "", linha(["Projeto", "Avaliador", "Critério", "Nota"]),
+    ...notas.map((n) => linha([n.projeto, n.avaliador, n.criterio, n.nota])),
+  ].join("\r\n");
+  const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `resultados-${banca.nome.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv` });
+  a.click();
+  URL.revokeObjectURL(url);
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 }
 
 function dadosResultado(app, id) {
@@ -323,7 +360,11 @@ function dadosResultado(app, id) {
   const notas = app.db.avaliacoes.filter((a) => a.bancaId === b.id).flatMap((a) => a.criterios.map((c) => ({
     projeto: app.db.projetos.find((p) => p.id === a.projetoId)?.nome,
     avaliador: gerente ? nomeUsuario(app.db, a.avaliadorId) : `Avaliador ${b.avaliadoresIds.indexOf(a.avaliadorId) + 1}`,
+<<<<<<< HEAD
     chave: `${a.id}-${c.id}`, criterio: c.titulo, peso: c.peso, nota: a.notas[c.id], avaliacaoId: a.id, criterioId: c.id,
+=======
+    criterio: c.titulo, nota: a.notas[c.id],
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
   })));
   return { b, ranking, notas, gerente };
 }
@@ -333,6 +374,7 @@ export function Resultados() {
   const nav = useNavigate();
   const { id } = useParams();
   const { b, ranking, notas, gerente } = dadosResultado(app, id);
+<<<<<<< HEAD
   useEffect(() => { if (b) obterAudio(); }, [b?.id]); // aquece a música para o pódio abrir sem travar
   if (!b) return <SemAcesso texto="O resultado desta banca ainda não foi publicado ou não está disponível para você." />;
   return <P.ResultadosPage banca={b} ranking={ranking} notas={notas} criterioDesempate={CRITERIO_DESEMPATE} podeGerenciar={gerente}
@@ -351,6 +393,13 @@ export function Resultados() {
       document.documentElement.requestFullscreen?.().catch(() => {});
       nav(`/bancas/${b.id}/podio`, { state: { auto: true } });
     }} />;
+=======
+  if (!b) return <SemAcesso texto="O resultado desta banca ainda não foi publicado ou não está disponível para você." />;
+  return <P.ResultadosPage banca={b} ranking={ranking} notas={notas} criterioDesempate={CRITERIO_DESEMPATE} podeGerenciar={gerente}
+    onExportar={() => exportarCsv(b, ranking, notas)}
+    onPublicar={() => window.confirm("Publicar o resultado? Ele ficará visível para alunos e orientadores.") && app.publicarResultado(b.id)}
+    onAbrirPodio={() => nav(`/bancas/${b.id}/podio`)} />;
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 }
 
 export function Podio() {
@@ -358,10 +407,16 @@ export function Podio() {
   const nav = useNavigate();
   const { id } = useParams();
   const { b, ranking } = dadosResultado(app, id);
+<<<<<<< HEAD
   const { state } = useLocation();
   if (!b) return <SemAcesso texto="O resultado desta banca ainda não foi publicado ou não está disponível para você." />;
   const colocados = ranking.filter((r) => r.posicao <= 3).map((r) => ({ id: r.projetoId, posicao: r.posicao, nome: r.projeto, pontuacao: r.pontuacao }));
   return <P.PodioPage key={String(!!state?.auto)} autoPalco={!!state?.auto} banca={b} colocados={colocados} onVoltar={() => nav(`/bancas/${b.id}/resultados`)} />;
+=======
+  if (!b) return <SemAcesso texto="O resultado desta banca ainda não foi publicado ou não está disponível para você." />;
+  const colocados = ranking.filter((r) => r.posicao <= 3).map((r) => ({ id: r.projetoId, posicao: r.posicao, nome: r.projeto, pontuacao: r.pontuacao }));
+  return <P.PodioPage banca={b} colocados={colocados} onVoltar={() => nav(`/bancas/${b.id}/resultados`)} />;
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 }
 
 export function TrocarInstituicao() {
@@ -406,7 +461,10 @@ export function Avaliacao() {
     onSubmit={({ projetoId, notas }) => {
       if (jaFeitas.includes(Number(projetoId))) return setErro("Você já avaliou este projeto nesta banca.");
       const avId = app.enviarAvaliacao(b.id, projetoId, notas);
+<<<<<<< HEAD
       if (!avId) return setErro("Você já avaliou este projeto nesta banca.");
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
       nav(`/minhas-bancas/${b.id}/recibo/${avId}`);
     }} />;
 }

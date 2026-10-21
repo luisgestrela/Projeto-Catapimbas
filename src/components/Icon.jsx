@@ -1,6 +1,7 @@
 // Ícones em traço (24x24, stroke 1.75) — mesma família visual, herdam a cor do texto.
 // "ranking" é um pódio: três colunas de alturas diferentes com o 1º lugar ao centro.
 const PATHS = {
+<<<<<<< HEAD
   trofeu: (
     <>
       <path d="M8 4h8v5a4 4 0 01-8 0z" />
@@ -29,6 +30,8 @@ const PATHS = {
       <circle cx="19" cy="10" r="2" />
     </>
   ),
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
   ranking: (
     <>
       <path d="M3 21h18" />

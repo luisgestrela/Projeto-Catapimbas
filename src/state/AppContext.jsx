@@ -131,11 +131,18 @@ export function AppProvider({ children }) {
       setDb((d) => {
         if (id) Object.assign(d.instituicoes.find((i) => i.id === id), dados);
         else d.instituicoes.push({ id: novoId(), ...dados });
+<<<<<<< HEAD
         registrar(d, "instituicao", dados.nome, id ? "Instituição editada" : "Instituição cadastrada");
       });
       return { ok: true };
     },
     statusInstituicao(id, status) { setDb((d) => { const i = d.instituicoes.find((x) => x.id === id); i.status = status; registrar(d, "instituicao", i.nome, `Status alterado para ${status}`); }); },
+=======
+      });
+      return { ok: true };
+    },
+    statusInstituicao(id, status) { setDb((d) => { d.instituicoes.find((i) => i.id === id).status = status; }); },
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 
     // ---- Administrador
     aprovar(userId) {
@@ -182,7 +189,10 @@ export function AppProvider({ children }) {
       setDb((d) => {
         const inst = d.instrumentos.find((i) => i.id === instrumentoId);
         const novo = { ...criterio, id: novoId(), versao: (criterio.versao || 1) + (criterio.id ? 1 : 0) };
+<<<<<<< HEAD
         registrar(d, "criterio", criterio.titulo, criterio.id ? `Nova versão do critério (peso ${criterio.peso})` : `Critério criado (peso ${criterio.peso})`);
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
         inst.criterios = criterio.id ? inst.criterios.map((c) => (c.id === criterio.id ? novo : c)) : [...inst.criterios, novo];
       });
     },
@@ -193,7 +203,10 @@ export function AppProvider({ children }) {
       setDb((d) => {
         if (id) Object.assign(d.projetos.find((x) => x.id === id), p);
         else d.projetos.push({ id: novoId(), instituicaoId: instId, ...p });
+<<<<<<< HEAD
         registrar(d, "projeto", p.nome, id ? "Projeto editado" : "Projeto cadastrado");
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
       });
     },
     salvarBanca(dados, id) {
@@ -201,6 +214,7 @@ export function AppProvider({ children }) {
       setDb((d) => {
         if (id) Object.assign(d.bancas.find((x) => x.id === id), b);
         else d.bancas.push({ id: novoId(), instituicaoId: instId, resultado: "rascunho", ...b });
+<<<<<<< HEAD
         registrar(d, "banca", b.nome, id ? "Banca editada (inclui pesos dos critérios)" : "Banca cadastrada");
       });
     },
@@ -234,6 +248,23 @@ export function AppProvider({ children }) {
         id, bancaId, projetoId: Number(projetoId), avaliadorId: usuario.id, data: agora(), notas,
         protocolo: `AV-${new Date().getFullYear()}-${String(id).slice(-6)}`,
         criterios: inst.criterios.map(({ id: cid, titulo, peso }) => ({ id: cid, titulo, peso: pesoDe(cid, peso) })),
+=======
+      });
+    },
+    publicarResultado(bancaId) {
+      setDb((d) => { d.bancas.find((b) => b.id === bancaId).resultado = "publicado"; });
+    },
+
+    // ---- Avaliação
+    enviarAvaliacao(bancaId, projetoId, notas) {
+      const banca = db.bancas.find((b) => b.id === bancaId);
+      const inst = db.instrumentos.find((i) => i.id === banca.instrumentoId);
+      const id = novoId();
+      const av = {
+        id, bancaId, projetoId: Number(projetoId), avaliadorId: usuario.id, data: agora(), notas,
+        protocolo: `AV-${new Date().getFullYear()}-${String(id).slice(-6)}`,
+        criterios: inst.criterios.map(({ id: cid, titulo, peso }) => ({ id: cid, titulo, peso })),
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
       };
       setDb((d) => {
         d.avaliacoes.push(av);

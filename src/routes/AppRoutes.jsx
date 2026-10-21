@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import { useEffect } from "react";
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "../components";
 import * as P from "../pages";
@@ -7,6 +10,7 @@ import * as T from "./telas";
 
 // Layout da área logada. Quem não entrou volta ao login; quem entrou sem instituição
 // escolhida é levado a escolher (ou aguardar aprovação).
+<<<<<<< HEAD
 // Aplica a configuração visual (cor principal) da instituição ativa.
 const mistura = (hex, alvo, p) => {
   const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255];
@@ -24,11 +28,16 @@ function useTemaInstituicao(cor) {
   }, [cor]);
 }
 
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
 function Shell({ exigeInstituicao = true }) {
   const app = useApp();
   const nav = useNavigate();
   const { pathname } = useLocation();
+<<<<<<< HEAD
   useTemaInstituicao(app.instituicao?.corPrimaria);
+=======
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
   if (!app.logado) return <Navigate to="/login" replace state={{ from: pathname }} />;
   if (exigeInstituicao && !app.papel) {
     return <Navigate to={app.vinculosAtivos.length > 1 ? "/trocar-instituicao" : "/conta-pendente"} replace />;
@@ -43,7 +52,11 @@ function Shell({ exigeInstituicao = true }) {
       onSair={() => { app.sair(); nav("/login"); }}
       onTrocarInstituicao={app.vinculosAtivos.length > 1 ? () => nav("/trocar-instituicao") : undefined}
     >
+<<<<<<< HEAD
       <div key={pathname} className="page-enter"><Outlet /></div>
+=======
+      <Outlet />
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
     </AppLayout>
   );
 }

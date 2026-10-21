@@ -9,10 +9,16 @@ import EmptyState from "./EmptyState";
 const COR_PRIMARIA = "#3a53d6";
 const CORES = [COR_PRIMARIA, "#d9a21b", "#2f8f5f", "#c4503f", "#7a8bd9", "#8d97a8"];
 
+<<<<<<< HEAD
 export default function ChartCard({ title, description, type = "bar", data = [], nameKey = "nome", dataKey = "valor", highlightTop = false }) {
   return (
     <Card title={title}>
       {description && <p className="chart-desc">{description}</p>}
+=======
+export default function ChartCard({ title, type = "bar", data = [], nameKey = "nome", dataKey = "valor" }) {
+  return (
+    <Card title={title}>
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
       {data.length === 0 ? (
         <EmptyState title="Sem dados para o período" description="Ajuste os filtros ou cadastre registros." />
       ) : (
@@ -29,9 +35,13 @@ export default function ChartCard({ title, description, type = "bar", data = [],
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e1e5ec" vertical={false} />
                 <XAxis dataKey={nameKey} tick={{ fill: "#586376", fontSize: 13 }} stroke="#c8cfdb" /><YAxis allowDecimals={false} tick={{ fill: "#586376", fontSize: 13 }} stroke="#c8cfdb" /><Tooltip cursor={{ fill: "#eceffd" }} />
+<<<<<<< HEAD
                 <Bar dataKey={dataKey} fill={COR_PRIMARIA} radius={[6, 6, 0, 0]} maxBarSize={56}>
                   {highlightTop && data.map((_, i) => <Cell key={i} fill={["#d9a21b", "#8d97a8", "#b97b4a"][i] || COR_PRIMARIA} />)}
                 </Bar>
+=======
+                <Bar dataKey={dataKey} fill={COR_PRIMARIA} radius={[6, 6, 0, 0]} />
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
               </BarChart>
             )}
           </ResponsiveContainer>

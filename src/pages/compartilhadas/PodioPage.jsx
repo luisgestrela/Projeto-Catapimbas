@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import { PageHeader, Podium, Button, EmptyState } from "../../components";
 
@@ -46,6 +47,15 @@ export default function PodioPage({ banca = {}, colocados = [], audioSrc = MUSIC
         <Button onClick={() => setPalco(true)} disabled={vazio}>Abrir em tela cheia</Button>
       </>} />
       {vazio
+=======
+import { PageHeader, Podium, Button, EmptyState } from "../../components";
+
+export default function PodioPage({ banca = {}, colocados = [], audioSrc, onVoltar }) {
+  return (
+    <>
+      <PageHeader title={`Pódio — ${banca.nome || ""}`} actions={<Button variant="secondary" onClick={onVoltar}>Voltar aos resultados</Button>} />
+      {colocados.length === 0
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
         ? <EmptyState title="Sem classificação para exibir" description="Publique ou calcule o resultado da banca primeiro." />
         : <Podium colocados={colocados} audioSrc={audioSrc} />}
     </>

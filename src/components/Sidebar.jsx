@@ -15,7 +15,11 @@ export default function Sidebar({ id, items = [], currentPath, open = false, onC
       <div className="brand"><Logo /></div>
       <nav className="sidebar-nav" aria-label="Navegação">
         {items.map((i) => (
+<<<<<<< HEAD
           <NavLink key={i.href} to={i.href} viewTransition className="nav-item" onClick={onClose}
+=======
+          <NavLink key={i.href} to={i.href} className="nav-item" onClick={onClose}
+>>>>>>> 7be79beb46e4d4880b4be0153fc9f95c47a13ec5
             aria-current={currentPath === i.href || currentPath?.startsWith(i.href + "/") ? "page" : undefined}>
             {ICONES[i.href] && <Icon name={ICONES[i.href]} />}
             <span>{i.label}</span>
