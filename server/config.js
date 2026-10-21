@@ -26,6 +26,7 @@ export const config = {
   porta: Number(process.env.PORT) || 3001,
   producao: process.env.NODE_ENV === "production",
   origem: process.env.CORS_ORIGIN || "http://localhost:5173",
+  origens: (process.env.CORS_ORIGIN || "").split(",").map((o) => o.trim()).filter(Boolean),
   supabaseUrl,
   supabaseServiceKey,
   supabaseAnonKey,
