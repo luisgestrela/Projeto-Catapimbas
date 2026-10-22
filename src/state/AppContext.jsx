@@ -23,8 +23,7 @@ export const HOME = {
 // - aluno: vê apenas os projetos em que é integrante (sem área de bancas).
 export const MENUS = {
   superadmin: [
-    { href: "/instituicoes", label: "Instituições" }, { href: "/plataforma/solicitacoes", label: "Solicitações" },
-    { href: "/plataforma/administradores", label: "Administradores" }, { href: "/projetos", label: "Projetos" },
+    { href: "/instituicoes", label: "Instituições" }, { href: "/projetos", label: "Projetos" },
   ],
   administrador: [
     { href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" },

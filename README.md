@@ -22,7 +22,7 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 |---|---|
 | Visitante | Landing, solicitação de acesso, login, recuperação de senha |
 | Pendente / Recusado | Tela de situação da conta |
-| Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela); solicitações de todas as instituições (aprovar, recusar ou reavaliar); administradores de cada instituição (escolher alguém que já tem conta ou criar a conta na hora); cadastro de projetos direto da plataforma, escolhendo a universidade |
+| Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela); gestão das instituições; cadastro de projetos direto da plataforma, escolhendo a universidade |
 | Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões, critérios (criar e **renomear** instrumentos), auditoria |
 | Coordenador | **Painel**, **bancas** (organizar eventos), **avaliadores** (designar por banca e acompanhar notas), **resultados** (ranking, correção de notas, exportação, publicação) e projetos |
 | Orientador | **Acompanhamento** dos projetos vinculados a ele: equipe e integrantes, situação e participação em bancas (somente leitura) |
@@ -64,7 +64,7 @@ src/
 │   ├── coordenador/     # painel, designação de avaliadores, resultados das bancas
 │   ├── orientador/      # acompanhamento dos projetos orientados
 │   ├── avaliador/       # minhas bancas, avaliação, recibo
-│   └── superadmin/      # instituições, solicitações e administradores da plataforma
+│   └── superadmin/      # instituições da plataforma
 ├── routes/
 │   ├── AppRoutes.jsx    # rotas e restrição por papel
 │   └── telas.jsx        # liga cada página aos dados e às ações
@@ -81,7 +81,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 | Rota | Descrição |
 |---|---|
 | `/`, `/login`, `/cadastro`, `/recuperar-senha`, `/conta-pendente` | Públicas |
-| `/instituicoes`, `/instituicoes/nova`, `/instituicoes/:id/editar`, `/plataforma/solicitacoes`, `/plataforma/administradores` | Superadmin |
+| `/instituicoes`, `/instituicoes/nova`, `/instituicoes/:id/editar` | Superadmin |
 | `/dashboard` | Administrador |
 | `/projetos`, `/projetos/:id` | Gestão (todos), orientador e aluno (só os vinculados a eles) |
 | `/projetos/novo`, `/projetos/:id/editar` | Administrador, coordenador e superadmin |
@@ -168,8 +168,6 @@ Lê `supabase/migrations/*.sql` e confere se toda tabela, coluna, relacionamento
 | `GET /api/instituicoes/publicas` | pública |
 | `GET /api/estado` | autenticado (dados filtrados por papel) |
 | `POST/PUT /api/instituicoes`, `PATCH /api/instituicoes/:id/status` | superadmin |
-| `GET /api/plataforma/solicitacoes`, `POST /api/plataforma/solicitacoes/:id/aprovar\|recusar` | superadmin (todas as instituições; uma recusada pode ser aprovada depois) |
-| `GET /api/plataforma/administradores`, `GET /api/plataforma/usuarios`, `POST /api/plataforma/instituicoes/:id/administradores` (`usuarioId`, `email` ou `nome`+`email`+`senha`), `DELETE /api/plataforma/administradores/:vinculoId` | superadmin (não exigem instituição selecionada) |
 | `POST /api/solicitacoes/:usuarioId/aprovar` e `/recusar` | administrador |
 | `PATCH /api/usuarios/:usuarioId/papel` e `/bloqueio`, `DELETE /api/usuarios/:usuarioId/vinculo` | administrador |
 | `POST /api/projetos`, `PUT /api/projetos/:id` | administrador, coordenador; superadmin também pela plataforma (informa `instituicaoId`) |

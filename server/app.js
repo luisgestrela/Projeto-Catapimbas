@@ -10,7 +10,6 @@ import avaliacoesRotas from "./routes/avaliacoes.js";
 import bancasRotas from "./routes/bancas.js";
 import criteriosRotas from "./routes/criterios.js";
 import instituicoesRotas from "./routes/instituicoes.js";
-import plataformaRotas from "./routes/plataforma.js";
 import projetosRotas from "./routes/projetos.js";
 import relatoriosRotas from "./routes/relatorios.js";
 import usuariosRotas from "./routes/usuarios.js";
@@ -53,9 +52,6 @@ app.use("/api", (req, _res, next) => {
 
 app.use("/api/auth", authRotas);
 app.use("/api/instituicoes", instituicoesRotas);
-
-// Rotas da plataforma (superadmin) não dependem de instituição: um cabeçalho X-Instituicao-Id antigo não deve derrubá-las.
-app.use("/api/plataforma", autenticar, plataformaRotas);
 
 app.use("/api", autenticar, contexto);
 

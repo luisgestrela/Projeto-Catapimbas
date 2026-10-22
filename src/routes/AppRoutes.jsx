@@ -91,8 +91,6 @@ export default function AppRoutes() {
         <Route path="/instituicoes" element={soSuper(<T.Instituicoes />)} />
         <Route path="/instituicoes/nova" element={soSuper(<T.InstituicaoForm />)} />
         <Route path="/instituicoes/:id/editar" element={soSuper(<T.InstituicaoForm />)} />
-        <Route path="/plataforma/solicitacoes" element={soSuper(<T.SolicitacoesPlataforma />)} />
-        <Route path="/plataforma/administradores" element={soSuper(<T.AdministradoresPlataforma />)} />
 
         <Route path="/dashboard" element={so(["administrador"], <T.Dashboard />)} />
 

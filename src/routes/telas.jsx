@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, EmptyState, PageHeader } from "../components";
 import * as P from "../pages";
@@ -117,67 +117,6 @@ export function Instituicoes() {
   return <P.InstituicoesPage instituicoes={app.db.instituicoes} onNova={() => nav("/instituicoes/nova")}
     onEntrar={async (i) => { const destino = await app.escolherInstituicao(i.id); if (destino) nav(destino); }}
     onEditar={(i) => nav(`/instituicoes/${i.id}/editar`)} onAlterarStatus={(i, s) => app.statusInstituicao(i.id, s)} />;
-}
-
-function useLista(caminho) {
-  const [linhas, setLinhas] = useState(null);
-  const [erro, setErro] = useState("");
-  const recarregar = useCallback(() => api.get(caminho).then((d) => { setLinhas(d); setErro(""); }).catch((e) => setErro(e.message || "Não foi possível carregar.")), [caminho]);
-  useEffect(() => { recarregar(); }, [recarregar]);
-  return { linhas, erro, recarregar };
-}
-
-// Falha ao carregar uma lista: mostra o motivo real e permite tentar de novo (em vez de "conteúdo indisponível").
-function ErroCarregamento({ texto, onTentar }) {
-  return (
-    <>
-      <PageHeader title="Não foi possível carregar esta página" />
-      <EmptyState title="Algo deu errado" description={texto} action={<Button onClick={onTentar}>Tentar novamente</Button>} />
-    </>
-  );
-}
-
-export function SolicitacoesPlataforma() {
-  const { linhas, erro, recarregar } = useLista("/plataforma/solicitacoes");
-  const [aviso, setAviso] = useState(null);
-  const agir = async (fn, sucesso) => {
-    try { await fn(); setAviso({ tipo: "ok", texto: sucesso }); await recarregar(); } catch (e) { setAviso({ tipo: "erro", texto: e.message }); }
-  };
-  if (erro && !linhas) return <ErroCarregamento texto={erro} onTentar={recarregar} />;
-  if (!linhas) return <p role="status">Carregando…</p>;
-  return <P.SolicitacoesPlataformaPage aviso={aviso} solicitacoes={linhas.map((v) => ({ ...v, papelRotulo: ROTULO_PAPEL[v.papel] || v.papel }))}
-    onAprovar={(s) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/aprovar`), `${s.nome} foi aprovado(a) em ${s.instituicao}.`)}
-    onRecusar={(s, j) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/recusar`, { justificativa: j }), `Solicitação de ${s.nome} recusada.`)} />;
-}
-
-export function AdministradoresPlataforma() {
-  const app = useApp();
-  const admins = useLista("/plataforma/administradores");
-  const usuarios = useLista("/plataforma/usuarios");
-  const [erros, setErros] = useState({});
-  const [aviso, setAviso] = useState(null);
-  const recarregarTudo = () => Promise.all([admins.recarregar(), usuarios.recarregar(), app.recarregar()]);
-  if (admins.erro && !admins.linhas) return <ErroCarregamento texto={admins.erro} onTentar={admins.recarregar} />;
-  if (!admins.linhas) return <p role="status">Carregando…</p>;
-  return <P.AdministradoresPlataformaPage administradores={admins.linhas} usuarios={usuarios.linhas || []} instituicoes={app.db.instituicoes} erros={erros} aviso={aviso}
-    onAdicionar={async (instituicaoId, corpo) => {
-      try {
-        await api.post(`/plataforma/instituicoes/${instituicaoId}/administradores`, corpo);
-        setErros({});
-        setAviso({ tipo: "ok", texto: `Administrador definido em ${app.db.instituicoes.find((i) => i.id === instituicaoId)?.nome || "a instituição"}.` });
-        await recarregarTudo();
-        return true;
-      } catch (e) {
-        setErros(e.campos || { email: e.message });
-        setAviso({ tipo: "erro", texto: e.message });
-        return false;
-      }
-    }}
-    onRevogar={async (a) => {
-      if (!window.confirm(`Remover ${a.nome} como administrador de ${a.instituicao}?`)) return;
-      try { await api.del(`/plataforma/administradores/${a.id}`); setAviso({ tipo: "ok", texto: `${a.nome} não administra mais ${a.instituicao}.` }); await recarregarTudo(); }
-      catch (e) { setAviso({ tipo: "erro", texto: e.message }); }
-    }} />;
 }
 
 export function InstituicaoForm() {
