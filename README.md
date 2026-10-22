@@ -22,7 +22,7 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 |---|---|
 | Visitante | Landing, solicitação de acesso, login, recuperação de senha |
 | Pendente / Recusado | Tela de situação da conta |
-| Superadministrador | Instituições (criar e editar) e projetos de todas |
+| Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela), solicitações de todas as instituições, e definição de quem administra cada uma |
 | Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões, critérios, auditoria |
 | Coordenador | Dashboard, projetos, bancas (criar, editar, publicar resultado) |
 | Orientador / Aluno | Dashboard, seus projetos, bancas e resultados publicados |
@@ -78,7 +78,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 | Rota | Descrição |
 |---|---|
 | `/`, `/login`, `/cadastro`, `/recuperar-senha`, `/conta-pendente` | Públicas |
-| `/instituicoes`, `/instituicoes/nova`, `/instituicoes/:id/editar` | Superadmin |
+| `/instituicoes`, `/instituicoes/nova`, `/instituicoes/:id/editar`, `/plataforma/solicitacoes`, `/plataforma/administradores` | Superadmin |
 | `/dashboard`, `/projetos`, `/projetos/:id`, `/projetos/novo` | Área institucional |
 | `/bancas`, `/bancas/:id`, `/bancas/:id/resultados`, `/bancas/:id/podio` | Bancas e resultados |
 | `/aprovacoes`, `/pessoas`, `/criterios`, `/auditoria` | Administrador |
@@ -161,6 +161,8 @@ Lê `supabase/migrations/*.sql` e confere se toda tabela, coluna, relacionamento
 | `GET /api/instituicoes/publicas` | pública |
 | `GET /api/estado` | autenticado (dados filtrados por papel) |
 | `POST/PUT /api/instituicoes`, `PATCH /api/instituicoes/:id/status` | superadmin |
+| `GET /api/plataforma/solicitacoes`, `POST /api/plataforma/solicitacoes/:id/aprovar\|recusar` | superadmin (todas as instituições) |
+| `GET /api/plataforma/administradores`, `POST /api/plataforma/instituicoes/:id/administradores`, `DELETE /api/plataforma/administradores/:vinculoId` | superadmin |
 | `POST /api/solicitacoes/:usuarioId/aprovar` e `/recusar` | administrador |
 | `PATCH /api/usuarios/:usuarioId/papel` e `/bloqueio`, `DELETE /api/usuarios/:usuarioId/vinculo` | administrador |
 | `POST /api/projetos`, `PUT /api/projetos/:id` | administrador, coordenador, orientador (apenas os próprios) |

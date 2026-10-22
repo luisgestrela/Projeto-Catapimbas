@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "../components";
 import * as P from "../pages";
-import { HOME, MENUS, ROTULO_PAPEL, useApp } from "../state/AppContext";
+import { HOME, MENUS, MENU_VOLTAR_PLATAFORMA, ROTULO_PAPEL, useApp } from "../state/AppContext";
 import * as T from "./telas";
 
 // Layout da área logada. Quem não entrou volta ao login; quem entrou sem instituição
@@ -36,12 +36,12 @@ function Shell({ exigeInstituicao = true }) {
   const papel = app.papel;
   return (
     <AppLayout
-      menuItems={papel ? MENUS[papel] : []}
+      menuItems={!papel ? [] : app.ehSuperadmin && papel === "administrador" ? [...MENUS.administrador, ...MENU_VOLTAR_PLATAFORMA] : MENUS[papel]}
       currentPath={pathname}
       instituicao={app.instituicao?.nome || (papel === "superadmin" ? "Plataforma" : undefined)}
-      usuario={{ nome: app.usuario.nome, papel: papel ? ROTULO_PAPEL[papel] : undefined }}
+      usuario={{ nome: app.usuario.nome, papel: papel ? ROTULO_PAPEL[app.ehSuperadmin ? "superadmin" : papel] : undefined }}
       onSair={async () => { await app.sair(); nav("/login"); }}
-      onTrocarInstituicao={app.vinculosAtivos.length > 1 ? () => nav("/trocar-instituicao") : undefined}
+      onTrocarInstituicao={app.ehSuperadmin ? () => nav("/instituicoes") : app.vinculosAtivos.length > 1 ? () => nav("/trocar-instituicao") : undefined}
     >
       <div key={pathname} className="page-enter"><Outlet /></div>
     </AppLayout>
@@ -54,6 +54,13 @@ function Papeis({ permitidos, children }) {
   return permitidos.includes(papel) ? children : <T.SemAcesso texto="Você não tem permissão para ver esta página." />;
 }
 const so = (permitidos, el) => <Papeis permitidos={permitidos}>{el}</Papeis>;
+
+// Telas da plataforma: só o superadmin, esteja ou não dentro de uma instituição.
+function SoSuperadmin({ children }) {
+  const { ehSuperadmin } = useApp();
+  return ehSuperadmin ? children : <T.SemAcesso texto="Você não tem permissão para ver esta página." />;
+}
+const soSuper = (el) => <SoSuperadmin>{el}</SoSuperadmin>;
 
 function Inicio() {
   const { papel } = useApp();
@@ -81,9 +88,11 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<Shell />}>
-        <Route path="/instituicoes" element={so(["superadmin"], <T.Instituicoes />)} />
-        <Route path="/instituicoes/nova" element={so(["superadmin"], <T.InstituicaoForm />)} />
-        <Route path="/instituicoes/:id/editar" element={so(["superadmin"], <T.InstituicaoForm />)} />
+        <Route path="/instituicoes" element={soSuper(<T.Instituicoes />)} />
+        <Route path="/instituicoes/nova" element={soSuper(<T.InstituicaoForm />)} />
+        <Route path="/instituicoes/:id/editar" element={soSuper(<T.InstituicaoForm />)} />
+        <Route path="/plataforma/solicitacoes" element={soSuper(<T.SolicitacoesPlataforma />)} />
+        <Route path="/plataforma/administradores" element={soSuper(<T.AdministradoresPlataforma />)} />
 
         <Route path="/dashboard" element={so(INSTITUCIONAL, <T.Dashboard />)} />
 

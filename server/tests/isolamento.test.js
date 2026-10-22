@@ -96,4 +96,23 @@ describe("isolamento institucional e autorização", () => {
     const r = await chamar(ctx.avaliador, "POST", `/bancas/${banca.id}/avaliacoes`, { corpo: { projetoId: livre, notas }, instituicao: ctx.ucsal });
     assert.equal(r.status, 400);
   });
+  test("superadmin tem as permissões de administrador em qualquer instituição (auditoria visível)", async () => {
+    for (const inst of [ctx.ucsal, ctx.techba]) {
+      const r = await chamar(ctx.super, "GET", "/estado", { instituicao: inst });
+      assert.equal(r.status, 200);
+      assert.ok(Array.isArray(r.dados.db.auditoria));
+    }
+  });
+
+  test("superadmin sem instituição selecionada não aprova solicitações", async () => {
+    assert.equal((await chamar(ctx.super, "POST", "/solicitacoes/1/aprovar")).status, 403);
+  });
+
+  test("rotas da plataforma: administrador comum é recusado e superadmin lista as solicitações", async () => {
+    assert.equal((await chamar(ctx.admin, "GET", "/plataforma/solicitacoes")).status, 403);
+    assert.equal((await chamar(ctx.admin, "GET", "/plataforma/administradores")).status, 403);
+    const r = await chamar(ctx.super, "GET", "/plataforma/solicitacoes");
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.dados));
+  });
 });

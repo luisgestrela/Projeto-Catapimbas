@@ -1,12 +1,13 @@
 import { PageHeader, DataTable, Badge, Button } from "../../components";
 
-export default function InstituicoesPage({ instituicoes = [], onNova, onEditar, onAlterarStatus }) {
+export default function InstituicoesPage({ instituicoes = [], onNova, onEntrar, onEditar, onAlterarStatus }) {
   const colunas = [
     { key: "nome", header: "Nome" },
     { key: "identificador", header: "Identificador" },
     { key: "status", header: "Status", render: (i) => <Badge status={i.status} /> },
     { key: "acoes", header: "Ações", render: (i) => (
       <div className="row">
+        <Button size="sm" onClick={() => onEntrar?.(i)}>Entrar</Button>
         <Button variant="secondary" size="sm" onClick={() => onEditar?.(i)}>Editar</Button>
         {i.status === "ativa"
           ? <Button variant="danger" size="sm" onClick={() => onAlterarStatus?.(i, "suspensa")}>Suspender</Button>
@@ -16,7 +17,7 @@ export default function InstituicoesPage({ instituicoes = [], onNova, onEditar, 
   ];
   return (
     <>
-      <PageHeader title="Instituições" subtitle="Crie, ative e suspenda instituições da plataforma."
+      <PageHeader title="Instituições" subtitle="Crie, ative e suspenda instituições. Use Entrar para administrar qualquer uma delas."
         actions={<Button onClick={onNova}>Nova instituição</Button>} />
       <DataTable columns={colunas} rows={instituicoes} emptyTitle="Nenhuma instituição cadastrada"
         emptyDescription="Cadastre a primeira instituição para começar." />

@@ -43,7 +43,9 @@ export async function papelValido(codigo) {
   return codigo;
 }
 
-export const temPermissao = (papel, permissao) => !!permissoesPorPapel.get(papel)?.has(permissao);
+// O superadmin (flag em usuario.superadmin) não tem linha em papel_permissao: ele possui todas as permissões,
+// valendo para qualquer instituição que ele selecionar (exigePermissao ainda exige uma instituição no contexto).
+export const temPermissao = (papel, permissao) => papel === "superadmin" || !!permissoesPorPapel.get(papel)?.has(permissao);
 
 export async function autenticar(req, _res, next) {
   try {

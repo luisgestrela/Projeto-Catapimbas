@@ -6,6 +6,8 @@ export { default as ContaPendentePage } from "./publicas/ContaPendentePage";
 export { default as ErroPage } from "./publicas/ErroPage";
 export { default as InstituicoesPage } from "./superadmin/InstituicoesPage";
 export { default as InstituicaoFormPage } from "./superadmin/InstituicaoFormPage";
+export { default as SolicitacoesPlataformaPage } from "./superadmin/SolicitacoesPlataformaPage";
+export { default as AdministradoresPlataformaPage } from "./superadmin/AdministradoresPlataformaPage";
 export { default as AprovacoesPage } from "./admin/AprovacoesPage";
 export { default as PessoasPermissoesPage } from "./admin/PessoasPermissoesPage";
 export { default as CriteriosPage } from "./admin/CriteriosPage";

@@ -10,6 +10,7 @@ import avaliacoesRotas from "./routes/avaliacoes.js";
 import bancasRotas from "./routes/bancas.js";
 import criteriosRotas from "./routes/criterios.js";
 import instituicoesRotas from "./routes/instituicoes.js";
+import plataformaRotas from "./routes/plataforma.js";
 import projetosRotas from "./routes/projetos.js";
 import relatoriosRotas from "./routes/relatorios.js";
 import usuariosRotas from "./routes/usuarios.js";
@@ -60,6 +61,7 @@ app.get("/api/estado", async (req, res) => {
   res.json(await montarEstado(req));
 });
 
+app.use("/api/plataforma", plataformaRotas);
 app.use("/api/projetos", projetosRotas);
 app.use("/api/bancas", bancasRotas);
 app.use("/api/avaliacoes", avaliacoesRotas);

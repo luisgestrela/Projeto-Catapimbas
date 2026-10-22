@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, EmptyState, PageHeader } from "../components";
 import * as P from "../pages";
@@ -104,8 +104,46 @@ export function NaoEncontrada() {
 export function Instituicoes() {
   const app = useApp();
   const nav = useNavigate();
+  // Esta lista é a porta de entrada do superadmin: ao voltar para cá ele sai da instituição que estava aberta.
+  useEffect(() => { if (app.instId) app.sairDaInstituicao(); }, []); // eslint-disable-line
   return <P.InstituicoesPage instituicoes={app.db.instituicoes} onNova={() => nav("/instituicoes/nova")}
+    onEntrar={async (i) => { const destino = await app.escolherInstituicao(i.id); if (destino) nav(destino); }}
     onEditar={(i) => nav(`/instituicoes/${i.id}/editar`)} onAlterarStatus={(i, s) => app.statusInstituicao(i.id, s)} />;
+}
+
+function useLista(caminho) {
+  const [linhas, setLinhas] = useState(null);
+  const [erro, setErro] = useState("");
+  const recarregar = useCallback(() => api.get(caminho).then((d) => { setLinhas(d); setErro(""); }).catch((e) => setErro(e.message)), [caminho]);
+  useEffect(() => { recarregar(); }, [recarregar]);
+  return { linhas, erro, recarregar };
+}
+
+export function SolicitacoesPlataforma() {
+  const { linhas, erro, recarregar } = useLista("/plataforma/solicitacoes");
+  const agir = async (fn) => { try { await fn(); await recarregar(); } catch (e) { window.alert(e.message); } };
+  if (erro && !linhas) return <SemAcesso texto={erro} />;
+  if (!linhas) return <p role="status">Carregando…</p>;
+  return <P.SolicitacoesPlataformaPage solicitacoes={linhas.map((v) => ({ ...v, papelRotulo: ROTULO_PAPEL[v.papel] || v.papel }))}
+    onAprovar={(s) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/aprovar`))}
+    onRecusar={(s, j) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/recusar`, { justificativa: j }))} />;
+}
+
+export function AdministradoresPlataforma() {
+  const app = useApp();
+  const { linhas, erro, recarregar } = useLista("/plataforma/administradores");
+  const [erros, setErros] = useState({});
+  if (erro && !linhas) return <SemAcesso texto={erro} />;
+  if (!linhas) return <p role="status">Carregando…</p>;
+  return <P.AdministradoresPlataformaPage administradores={linhas} instituicoes={app.db.instituicoes} erros={erros}
+    onAdicionar={async (instituicaoId, email) => {
+      try { await api.post(`/plataforma/instituicoes/${instituicaoId}/administradores`, { email }); setErros({}); await recarregar(); return true; }
+      catch (e) { setErros(e.campos || { email: e.message }); return false; }
+    }}
+    onRevogar={async (a) => {
+      if (!window.confirm(`Remover ${a.nome} como administrador de ${a.instituicao}?`)) return;
+      try { await api.del(`/plataforma/administradores/${a.id}`); await recarregar(); } catch (e) { window.alert(e.message); }
+    }} />;
 }
 
 export function InstituicaoForm() {
@@ -358,7 +396,7 @@ export function Podio() {
 export function TrocarInstituicao() {
   const app = useApp();
   const nav = useNavigate();
-  if (app.papel === "superadmin") return <Navigate to={HOME.superadmin} replace />;
+  if (app.ehSuperadmin) return <Navigate to={HOME.superadmin} replace />;
   const vinculos = app.vinculosAtivos.map((v) => ({
     instituicaoId: v.instituicaoId, papel: ROTULO_PAPEL[v.papel],
     instituicao: app.db.instituicoes.find((i) => i.id === v.instituicaoId)?.nome,

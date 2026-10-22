@@ -16,7 +16,10 @@ function guardarInstituicao(id) { try { if (id) sessionStorage.setItem(CHAVE_INS
 export const HOME = { superadmin: "/instituicoes", administrador: "/dashboard", coordenador: "/dashboard", orientador: "/dashboard", aluno: "/dashboard", avaliador: "/minhas-bancas" };
 
 export const MENUS = {
-  superadmin: [{ href: "/instituicoes", label: "Instituições" }, { href: "/projetos", label: "Projetos" }],
+  superadmin: [
+    { href: "/instituicoes", label: "Instituições" }, { href: "/plataforma/solicitacoes", label: "Solicitações" },
+    { href: "/plataforma/administradores", label: "Administradores" }, { href: "/projetos", label: "Projetos" },
+  ],
   administrador: [
     { href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" },
     { href: "/aprovacoes", label: "Aprovações" }, { href: "/pessoas", label: "Pessoas e permissões" },
@@ -27,6 +30,9 @@ export const MENUS = {
   aluno: [{ href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" }],
   avaliador: [{ href: "/minhas-bancas", label: "Minhas bancas" }],
 };
+
+// Dentro de uma instituição o superadmin vê o menu do administrador, mais o caminho de volta à plataforma.
+export const MENU_VOLTAR_PLATAFORMA = [{ href: "/instituicoes", label: "Voltar à plataforma" }];
 
 export const ROTULO_PAPEL = {
   superadmin: "Superadministrador", administrador: "Administrador", coordenador: "Coordenador",
@@ -64,8 +70,10 @@ export function AppProvider({ children }) {
   const { usuario, db } = estado;
   const vinculosAtivos = ativosDe(estado);
   const vinculoAtual = vinculosAtivos.find((x) => x.instituicaoId === instituicaoId) || null;
-  const papel = usuario?.superadmin ? "superadmin" : vinculoAtual?.papel || null;
   const instituicao = db.instituicoes.find((i) => i.id === instituicaoId) || null;
+  const ehSuperadmin = !!usuario?.superadmin;
+  // Superadmin: sem instituição escolhida está na "plataforma"; dentro de uma instituição age como administrador dela (com todas as permissões no servidor).
+  const papel = ehSuperadmin ? (instituicao ? "administrador" : "superadmin") : vinculoAtual?.papel || null;
   const instId = instituicao?.id ?? null;
 
   const acao = async (fn, { silencioso = false } = {}) => {
@@ -81,7 +89,7 @@ export function AppProvider({ children }) {
   };
 
   const api_ = {
-    db, usuario, papel, instituicao, instId, vinculosAtivos, carregando,
+    db, usuario, papel, ehSuperadmin, instituicao, instId, vinculosAtivos, carregando,
     sessao: { usuarioId: usuario?.id ?? null, instituicaoId },
     logado: !!usuario,
     recarregar: carregar,
@@ -101,7 +109,17 @@ export function AppProvider({ children }) {
       escolher(null);
       setEstado(VAZIO);
     },
+    async sairDaInstituicao() {
+      escolher(null);
+      await carregar();
+    },
     async escolherInstituicao(id) {
+      if (ehSuperadmin) {
+        if (!db.instituicoes.some((i) => i.id === id)) return null;
+        escolher(id);
+        await carregar();
+        return HOME.administrador;
+      }
       const v = vinculosAtivos.find((x) => x.instituicaoId === id);
       if (!v) return null;
       escolher(id);
