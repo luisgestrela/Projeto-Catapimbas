@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { auditar } from "../auditoria.js";
 import { exigeInstituicao, exigePermissao } from "../auth.js";
-import { consultar, rpc, supabase } from "../supabase.js";
+import { ErroHttp, consultar, rpc, supabase } from "../supabase.js";
 import { inteiro, invalido, texto } from "../validar.js";
 
 const r = Router();
@@ -9,11 +9,28 @@ r.use(exigeInstituicao, exigePermissao("criterio:gerir"));
 
 r.post("/", async (req, res) => {
   const nome = texto(req.body?.nome, "nome", { min: 2, max: 120 });
+  const descricao = texto(req.body?.descricao, "descricao", { max: 500, obrigatorio: false });
   const novo = await consultar(
-    supabase.from("instrumento").insert({ instituicao_id: req.instituicaoId, nome, criado_por: req.usuario.id }).select("id").single(),
+    supabase.from("instrumento").insert({ instituicao_id: req.instituicaoId, nome, descricao: descricao || null, criado_por: req.usuario.id }).select("id").single(),
   );
   await auditar(req, req.instituicaoId, "criterio", nome, "Instrumento criado");
   res.status(201).json({ id: novo.id });
+});
+
+// Renomeia o instrumento (e ajusta a descrição). Bancas já criadas guardam seus próprios critérios, então não são afetadas.
+r.put("/:id", async (req, res) => {
+  const id = inteiro(req.params.id, "id");
+  const nome = texto(req.body?.nome, "nome", { min: 2, max: 120 });
+  const descricao = texto(req.body?.descricao, "descricao", { max: 500, obrigatorio: false });
+  const atual = await consultar(
+    supabase.from("instrumento").select("id, nome").eq("id", id).eq("instituicao_id", req.instituicaoId).is("arquivado_em", null).maybeSingle(),
+  );
+  if (!atual) throw new ErroHttp(404, "Registro não encontrado.");
+  await consultar(
+    supabase.from("instrumento").update({ nome, descricao: descricao || null, atualizado_em: new Date().toISOString() }).eq("id", id).eq("instituicao_id", req.instituicaoId),
+  );
+  await auditar(req, req.instituicaoId, "criterio", nome, atual.nome === nome ? "Instrumento editado" : `Instrumento renomeado de "${atual.nome}" para "${nome}"`);
+  res.json({ id });
 });
 
 r.post("/:id/criterios", async (req, res) => {

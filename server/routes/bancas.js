@@ -35,6 +35,13 @@ r.put("/:id", exigePermissao("banca:gerir"), async (req, res) => {
   res.json({ id });
 });
 
+// Designa ou remove avaliadores (inclusive com a banca em andamento). Quem já lançou notas não pode ser removido.
+r.put("/:id/avaliadores", exigePermissao("banca:gerir"), async (req, res) => {
+  const id = inteiro(req.params.id, "id");
+  await rpc("designar_avaliadores", { p_inst: req.instituicaoId, p_banca: id, p_avaliadores: listaIds(req.body?.avaliadoresIds, "avaliadoresIds"), p_ator: req.usuario.id });
+  res.json({ id });
+});
+
 async function carregarVisivel(req) {
   const id = inteiro(req.params.id, "id");
   const dados = await dadosDaBanca(req.instituicaoId, id);

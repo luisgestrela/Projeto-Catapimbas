@@ -54,6 +54,9 @@ app.use("/api", (req, _res, next) => {
 app.use("/api/auth", authRotas);
 app.use("/api/instituicoes", instituicoesRotas);
 
+// Rotas da plataforma (superadmin) não dependem de instituição: um cabeçalho X-Instituicao-Id antigo não deve derrubá-las.
+app.use("/api/plataforma", autenticar, plataformaRotas);
+
 app.use("/api", autenticar, contexto);
 
 app.get("/api/estado", async (req, res) => {
@@ -61,7 +64,6 @@ app.get("/api/estado", async (req, res) => {
   res.json(await montarEstado(req));
 });
 
-app.use("/api/plataforma", plataformaRotas);
 app.use("/api/projetos", projetosRotas);
 app.use("/api/bancas", bancasRotas);
 app.use("/api/avaliacoes", avaliacoesRotas);

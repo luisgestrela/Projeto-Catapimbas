@@ -6,7 +6,9 @@ import Icon from "./Icon";
 const ICONES = {
   "/dashboard": "dashboard", "/projetos": "projetos", "/bancas": "bancas", "/aprovacoes": "aprovacoes",
   "/pessoas": "pessoas", "/criterios": "criterios", "/auditoria": "auditoria",
-  "/instituicoes": "instituicoes", "/minhas-bancas": "avaliar",
+  "/instituicoes": "instituicoes", "/minhas-bancas": "avaliar", "/inicio": "inicio",
+  "/painel": "dashboard", "/avaliadores": "avaliar", "/resultados": "ranking", "/acompanhamento": "equipes",
+  "/plataforma/solicitacoes": "aprovacoes", "/plataforma/administradores": "pessoas",
 };
 
 export default function Sidebar({ id, items = [], currentPath, open = false, onClose }) {

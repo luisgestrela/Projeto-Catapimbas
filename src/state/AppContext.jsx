@@ -13,8 +13,14 @@ const CHAVE_INSTITUICAO = "ap-instituicao";
 function lerInstituicao() { try { return Number(sessionStorage.getItem(CHAVE_INSTITUICAO)) || null; } catch { return null; } }
 function guardarInstituicao(id) { try { if (id) sessionStorage.setItem(CHAVE_INSTITUICAO, String(id)); else sessionStorage.removeItem(CHAVE_INSTITUICAO); } catch { /* sem armazenamento */ } }
 
-export const HOME = { superadmin: "/instituicoes", administrador: "/dashboard", coordenador: "/dashboard", orientador: "/dashboard", aluno: "/dashboard", avaliador: "/minhas-bancas" };
+export const HOME = {
+  superadmin: "/instituicoes", administrador: "/dashboard", coordenador: "/painel", orientador: "/acompanhamento", aluno: "/projetos", avaliador: "/inicio",
+};
 
+// Cada perfil tem o seu fluxo:
+// - coordenador: organiza bancas, designa avaliadores e consulta resultados;
+// - orientador: acompanha os projetos vinculados a ele e seus integrantes;
+// - aluno: vê apenas os projetos em que é integrante (sem área de bancas).
 export const MENUS = {
   superadmin: [
     { href: "/instituicoes", label: "Instituições" }, { href: "/plataforma/solicitacoes", label: "Solicitações" },
@@ -25,10 +31,13 @@ export const MENUS = {
     { href: "/aprovacoes", label: "Aprovações" }, { href: "/pessoas", label: "Pessoas e permissões" },
     { href: "/criterios", label: "Critérios" }, { href: "/auditoria", label: "Auditoria" },
   ],
-  coordenador: [{ href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" }],
-  orientador: [{ href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" }],
-  aluno: [{ href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" }],
-  avaliador: [{ href: "/minhas-bancas", label: "Minhas bancas" }],
+  coordenador: [
+    { href: "/painel", label: "Painel" }, { href: "/bancas", label: "Bancas" }, { href: "/avaliadores", label: "Avaliadores" },
+    { href: "/resultados", label: "Resultados" }, { href: "/projetos", label: "Projetos" },
+  ],
+  orientador: [{ href: "/acompanhamento", label: "Acompanhamento" }, { href: "/projetos", label: "Meus projetos" }],
+  aluno: [{ href: "/projetos", label: "Meus projetos" }],
+  avaliador: [{ href: "/inicio", label: "Início" }, { href: "/minhas-bancas", label: "Minhas bancas" }],
 };
 
 // Dentro de uma instituição o superadmin vê o menu do administrador, mais o caminho de volta à plataforma.
@@ -146,7 +155,8 @@ export function AppProvider({ children }) {
     alterarPapel: (userId, novo) => acao(() => api.patch(`/usuarios/${userId}/papel`, { papel: novo })),
     bloquear: (userId, bloquear) => acao(() => api.patch(`/usuarios/${userId}/bloqueio`, { bloquear })),
     revogar: (userId) => acao(() => api.del(`/usuarios/${userId}/vinculo`)),
-    novoInstrumento: (nome) => acao(() => api.post("/instrumentos", { nome })),
+    novoInstrumento: (nome, descricao) => acao(() => api.post("/instrumentos", { nome, descricao }), { silencioso: true }),
+    editarInstrumento: (id, nome, descricao) => acao(() => api.put(`/instrumentos/${id}`, { nome, descricao }), { silencioso: true }),
     salvarCriterio: (instrumentoId, criterio) => acao(() => api.post(`/instrumentos/${instrumentoId}/criterios`, {
       id: criterio.id, titulo: criterio.titulo, descricao: criterio.descricao, peso: criterio.peso, escala: criterio.escala, descritores: criterio.descritores,
     })),
@@ -155,6 +165,7 @@ export function AppProvider({ children }) {
       const corpo = {
         nome: dados.nome, descricao: dados.descricao, status: dados.status, ano: Number(dados.ano), semestre: String(dados.semestre),
         equipe: dados.equipe, orientadorId: Number(dados.orientadorId) || null, alunosIds: dados.alunosIds,
+        ...(dados.instituicaoId ? { instituicaoId: Number(dados.instituicaoId) } : {}),
       };
       return id ? api.put(`/projetos/${id}`, corpo) : api.post("/projetos", corpo);
     }),
@@ -165,6 +176,7 @@ export function AppProvider({ children }) {
       };
       return id ? api.put(`/bancas/${id}`, corpo) : api.post("/bancas", corpo);
     }),
+    designarAvaliadores: (bancaId, avaliadoresIds) => acao(() => api.put(`/bancas/${bancaId}/avaliadores`, { avaliadoresIds }), { silencioso: true }),
     publicarResultado: (bancaId) => acao(() => api.post(`/bancas/${bancaId}/publicar`)),
 
     alterarNota: (avaliacaoId, criterioId, nova, justificativa) =>

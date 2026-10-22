@@ -96,6 +96,12 @@ const PATHS = {
       <path d="M14.5 6.5l3 3" />
     </>
   ),
+  inicio: (
+    <>
+      <path d="M3.5 11L12 4l8.5 7" />
+      <path d="M5.5 9.5V20h13V9.5M10 20v-5.5h4V20" />
+    </>
+  ),
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   fechar: <path d="M6 6l12 12M18 6L6 18" />,
 };

@@ -31,8 +31,9 @@ function projetosVisiveis({ db, usuario, papel, instId }) {
 }
 function bancasVisiveis(app) {
   const { db, papel, instId } = app;
+  if (papel === "aluno") return []; // aluno não tem área de bancas
   const daInst = db.bancas.filter((b) => b.instituicaoId === instId);
-  if (papel === "orientador" || papel === "aluno") {
+  if (papel === "orientador") {
     const meus = projetosVisiveis(app).map((p) => p.id);
     return daInst.filter((b) => b.projetosIds.some((id) => meus.includes(id)));
   }
@@ -42,6 +43,13 @@ const nomeUsuario = (db, id) => db.usuarios.find((u) => u.id === id)?.nome ?? "�
 const gerencia = (papel) => papel === "administrador" || papel === "coordenador";
 const comPapelNaInst = (db, instId, papel) =>
   db.usuarios.filter((u) => u.vinculos.some((v) => v.instituicaoId === instId && v.papel === papel && v.situacao === "ativo"));
+// Pessoas com o papel indicado e a universidade a que cada uma está vinculada. Sem `instId`, devolve as de todas as instituições
+// (visão do superadmin na plataforma); uma pessoa vinculada a duas universidades aparece uma vez em cada.
+const pessoasComPapel = (db, papel, instId) => db.usuarios.flatMap((u) => u.vinculos
+  .filter((v) => v.papel === papel && v.situacao === "ativo" && (!instId || v.instituicaoId === instId))
+  .map((v) => ({ id: u.id, nome: u.nome, email: u.email, instituicaoId: v.instituicaoId, instituicao: db.instituicoes.find((i) => i.id === v.instituicaoId)?.nome || "" })))
+  .sort((a, b) => a.nome.localeCompare(b.nome));
+const nomeInstituicao = (db, id) => db.instituicoes.find((i) => i.id === id)?.nome || "";
 
 // ---------- Páginas públicas ----------
 export function Login() {
@@ -114,35 +122,61 @@ export function Instituicoes() {
 function useLista(caminho) {
   const [linhas, setLinhas] = useState(null);
   const [erro, setErro] = useState("");
-  const recarregar = useCallback(() => api.get(caminho).then((d) => { setLinhas(d); setErro(""); }).catch((e) => setErro(e.message)), [caminho]);
+  const recarregar = useCallback(() => api.get(caminho).then((d) => { setLinhas(d); setErro(""); }).catch((e) => setErro(e.message || "Não foi possível carregar.")), [caminho]);
   useEffect(() => { recarregar(); }, [recarregar]);
   return { linhas, erro, recarregar };
 }
 
+// Falha ao carregar uma lista: mostra o motivo real e permite tentar de novo (em vez de "conteúdo indisponível").
+function ErroCarregamento({ texto, onTentar }) {
+  return (
+    <>
+      <PageHeader title="Não foi possível carregar esta página" />
+      <EmptyState title="Algo deu errado" description={texto} action={<Button onClick={onTentar}>Tentar novamente</Button>} />
+    </>
+  );
+}
+
 export function SolicitacoesPlataforma() {
   const { linhas, erro, recarregar } = useLista("/plataforma/solicitacoes");
-  const agir = async (fn) => { try { await fn(); await recarregar(); } catch (e) { window.alert(e.message); } };
-  if (erro && !linhas) return <SemAcesso texto={erro} />;
+  const [aviso, setAviso] = useState(null);
+  const agir = async (fn, sucesso) => {
+    try { await fn(); setAviso({ tipo: "ok", texto: sucesso }); await recarregar(); } catch (e) { setAviso({ tipo: "erro", texto: e.message }); }
+  };
+  if (erro && !linhas) return <ErroCarregamento texto={erro} onTentar={recarregar} />;
   if (!linhas) return <p role="status">Carregando…</p>;
-  return <P.SolicitacoesPlataformaPage solicitacoes={linhas.map((v) => ({ ...v, papelRotulo: ROTULO_PAPEL[v.papel] || v.papel }))}
-    onAprovar={(s) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/aprovar`))}
-    onRecusar={(s, j) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/recusar`, { justificativa: j }))} />;
+  return <P.SolicitacoesPlataformaPage aviso={aviso} solicitacoes={linhas.map((v) => ({ ...v, papelRotulo: ROTULO_PAPEL[v.papel] || v.papel }))}
+    onAprovar={(s) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/aprovar`), `${s.nome} foi aprovado(a) em ${s.instituicao}.`)}
+    onRecusar={(s, j) => agir(() => api.post(`/plataforma/solicitacoes/${s.id}/recusar`, { justificativa: j }), `Solicitação de ${s.nome} recusada.`)} />;
 }
 
 export function AdministradoresPlataforma() {
   const app = useApp();
-  const { linhas, erro, recarregar } = useLista("/plataforma/administradores");
+  const admins = useLista("/plataforma/administradores");
+  const usuarios = useLista("/plataforma/usuarios");
   const [erros, setErros] = useState({});
-  if (erro && !linhas) return <SemAcesso texto={erro} />;
-  if (!linhas) return <p role="status">Carregando…</p>;
-  return <P.AdministradoresPlataformaPage administradores={linhas} instituicoes={app.db.instituicoes} erros={erros}
-    onAdicionar={async (instituicaoId, email) => {
-      try { await api.post(`/plataforma/instituicoes/${instituicaoId}/administradores`, { email }); setErros({}); await recarregar(); return true; }
-      catch (e) { setErros(e.campos || { email: e.message }); return false; }
+  const [aviso, setAviso] = useState(null);
+  const recarregarTudo = () => Promise.all([admins.recarregar(), usuarios.recarregar(), app.recarregar()]);
+  if (admins.erro && !admins.linhas) return <ErroCarregamento texto={admins.erro} onTentar={admins.recarregar} />;
+  if (!admins.linhas) return <p role="status">Carregando…</p>;
+  return <P.AdministradoresPlataformaPage administradores={admins.linhas} usuarios={usuarios.linhas || []} instituicoes={app.db.instituicoes} erros={erros} aviso={aviso}
+    onAdicionar={async (instituicaoId, corpo) => {
+      try {
+        await api.post(`/plataforma/instituicoes/${instituicaoId}/administradores`, corpo);
+        setErros({});
+        setAviso({ tipo: "ok", texto: `Administrador definido em ${app.db.instituicoes.find((i) => i.id === instituicaoId)?.nome || "a instituição"}.` });
+        await recarregarTudo();
+        return true;
+      } catch (e) {
+        setErros(e.campos || { email: e.message });
+        setAviso({ tipo: "erro", texto: e.message });
+        return false;
+      }
     }}
     onRevogar={async (a) => {
       if (!window.confirm(`Remover ${a.nome} como administrador de ${a.instituicao}?`)) return;
-      try { await api.del(`/plataforma/administradores/${a.id}`); await recarregar(); } catch (e) { window.alert(e.message); }
+      try { await api.del(`/plataforma/administradores/${a.id}`); setAviso({ tipo: "ok", texto: `${a.nome} não administra mais ${a.instituicao}.` }); await recarregarTudo(); }
+      catch (e) { setAviso({ tipo: "erro", texto: e.message }); }
     }} />;
 }
 
@@ -185,8 +219,7 @@ export function Pessoas() {
 export function Criterios() {
   const app = useApp();
   const instrumentos = app.db.instrumentos.filter((i) => i.instituicaoId === app.instId);
-  return <P.CriteriosPage instrumentos={instrumentos} onSalvarCriterio={app.salvarCriterio}
-    onNovoInstrumento={() => { const n = window.prompt("Nome do novo instrumento:"); if (n?.trim()) app.novoInstrumento(n.trim()); }} />;
+  return <P.CriteriosPage instrumentos={instrumentos} onSalvarCriterio={app.salvarCriterio} onNovoInstrumento={app.novoInstrumento} onEditarInstrumento={app.editarInstrumento} />;
 }
 
 const OPERACOES = { aprovacao: "Aprovação de usuário", nota: "Alteração de nota", permissao: "Mudança de permissão", projeto: "Projeto", banca: "Banca", criterio: "Critério", instituicao: "Instituição" };
@@ -239,7 +272,8 @@ export function Projetos() {
   });
   const total = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
   const atual = Math.min(pagina, total);
-  const linhas = lista.slice((atual - 1) * TAM_PAGINA, atual * TAM_PAGINA).map((p) => ({ ...p, orientador: nomeUsuario(db, p.orientadorId) }));
+  const linhas = lista.slice((atual - 1) * TAM_PAGINA, atual * TAM_PAGINA).map((p) => ({ ...p, orientador: nomeUsuario(db, p.orientadorId), instituicao: nomeInstituicao(db, p.instituicaoId) }));
+  const somenteMeus = papel === "aluno" || papel === "orientador";
   const exportar = (ids) => {
     const params = new URLSearchParams();
     for (const k of ["nome", "orientador", "equipe", "aluno", "ano", "semestre"]) if (f[k]) params.set(k, f[k]);
@@ -248,12 +282,14 @@ export function Projetos() {
   };
   return <P.ProjetosPage projetos={linhas} pagina={atual} totalPaginas={total} onExportar={exportar} totalFiltrado={lista.length}
     instituicoes={papel === "superadmin" ? db.instituicoes : undefined}
-    podeCriar={["administrador", "coordenador", "orientador"].includes(papel)}
+    titulo={somenteMeus ? "Meus projetos" : "Projetos"}
+    subtitulo={papel === "aluno" ? "Projetos dos quais você é integrante." : papel === "orientador" ? "Projetos vinculados a você como orientador." : "Consulte, filtre e acompanhe os projetos."}
+    podeCriar={["superadmin", "administrador", "coordenador"].includes(papel)}
     onFiltrar={(v) => { setF(v); setPagina(1); }} onPagina={setPagina}
     onNovo={() => nav("/projetos/novo")} onAbrir={(p) => nav(`/projetos/${p.id}`)} />;
 }
 
-const podeEditarProjeto = (app, p) => gerencia(app.papel) || (app.papel === "orientador" && p.orientadorId === app.usuario.id);
+const podeEditarProjeto = (app) => gerencia(app.papel) || app.papel === "superadmin";
 
 export function ProjetoDetalhe() {
   const app = useApp();
@@ -262,9 +298,13 @@ export function ProjetoDetalhe() {
   const p = projetosVisiveis(app).find((x) => x.id === Number(id));
   if (!p) return <SemAcesso />;
   const integrantes = p.alunosIds.map((aid) => app.db.usuarios.find((u) => u.id === aid)).filter(Boolean)
-    .map((u) => ({ id: u.id, nome: u.nome, email: u.email, funcao: "Aluno" }));
-  return <P.ProjetoDetalhePage projeto={{ ...p, orientador: nomeUsuario(app.db, p.orientadorId), integrantes }}
-    podeEditar={podeEditarProjeto(app, p)} onEditar={() => nav(`/projetos/${p.id}/editar`)} onVoltar={() => nav("/projetos")} />;
+    .map((u) => ({ id: u.id, nome: u.nome, email: u.email, funcao: "Aluno", instituicao: app.papel === "superadmin" ? nomeInstituicao(app.db, p.instituicaoId) : "" }));
+  // A participação em bancas aparece para quem acompanha ou organiza (não para o aluno).
+  const mostraBancas = app.instId && app.papel !== "aluno";
+  const bancas = mostraBancas ? app.db.bancas.filter((b) => b.projetosIds.includes(p.id))
+    .map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b) })) : undefined;
+  return <P.ProjetoDetalhePage projeto={{ ...p, orientador: nomeUsuario(app.db, p.orientadorId), integrantes, bancas, instituicao: app.papel === "superadmin" ? nomeInstituicao(app.db, p.instituicaoId) : "" }}
+    podeEditar={podeEditarProjeto(app)} onEditar={() => nav(`/projetos/${p.id}/editar`)} onVoltar={() => nav("/projetos")} />;
 }
 
 export function ProjetoForm() {
@@ -273,15 +313,18 @@ export function ProjetoForm() {
   const { id } = useParams();
   const [erros, setErros] = useState({});
   const existente = id ? projetosVisiveis(app).find((x) => x.id === Number(id)) : null;
-  if (id && (!existente || !podeEditarProjeto(app, existente))) return <SemAcesso />;
-  const inicial = existente || { orientadorId: app.papel === "orientador" ? app.usuario.id : "" };
-  const orientadores = comPapelNaInst(app.db, app.instId, "orientador").map(({ id: i, nome }) => ({ id: i, nome }));
-  const alunos = comPapelNaInst(app.db, app.instId, "aluno").map(({ id: i, nome }) => ({ id: i, nome }));
-  return <P.ProjetoFormPage key={id || "novo"} inicial={inicial} orientadores={orientadores} alunos={alunos} erros={erros}
+  if (!podeEditarProjeto(app) || (id && !existente)) return <SemAcesso />;
+  const naPlataforma = app.papel === "superadmin"; // sem instituição escolhida: o superadmin escolhe a universidade no formulário
+  const filtroInst = naPlataforma ? undefined : app.instId;
+  const orientadores = pessoasComPapel(app.db, "orientador", filtroInst);
+  const alunos = pessoasComPapel(app.db, "aluno", filtroInst);
+  return <P.ProjetoFormPage key={id || "novo"} inicial={existente || {}} orientadores={orientadores} alunos={alunos} erros={erros}
+    instituicoes={naPlataforma ? app.db.instituicoes.filter((i) => i.status === "ativa" || i.id === existente?.instituicaoId) : undefined}
     onCancelar={() => nav(existente ? `/projetos/${existente.id}` : "/projetos")}
     onSubmit={async (f) => {
       if (!f.nome.trim()) return setErros({ nome: "Informe o nome do projeto." });
-      const r = await app.salvarProjeto({ ...f, nome: f.nome.trim() }, existente?.id);
+      if (naPlataforma && !f.instituicaoId) return setErros({ instituicaoId: "Escolha a universidade do projeto." });
+      const r = await app.salvarProjeto({ ...f, nome: f.nome.trim(), instituicaoId: naPlataforma ? f.instituicaoId : undefined }, existente?.id);
       if (r.erro) return;
       nav(existente ? `/projetos/${existente.id}` : "/projetos");
     }} />;
@@ -328,6 +371,7 @@ export function BancaForm() {
     projetos={db.projetos.filter((p) => p.instituicaoId === instId && (p.status === "ativo" || existente?.projetosIds.includes(p.id))).map(({ id: i, nome }) => ({ id: i, nome }))}
     avaliadores={comPapelNaInst(db, instId, "avaliador").map(({ id: i, nome }) => ({ id: i, nome }))}
     instrumentos={db.instrumentos.filter((i) => i.instituicaoId === instId)}
+    podeCriarInstrumento={app.papel === "administrador"} onIrParaCriterios={() => nav("/criterios")}
     avaliacoesExistentes={existente ? db.avaliacoes.some((a) => a.bancaId === existente.id) : false}
     onCancelar={() => nav(existente ? `/bancas/${existente.id}` : "/bancas")}
     onSubmit={async (f) => {
@@ -405,9 +449,91 @@ export function TrocarInstituicao() {
     onEscolher={async (v) => { const destino = await app.escolherInstituicao(v.instituicaoId); if (destino) nav(destino); }} />;
 }
 
+// ---------- Coordenador ----------
+const avaliadosNaBanca = (db, b) => db.avaliacoes.filter((a) => a.bancaId === b.id).length;
+const previstasNaBanca = (b) => b.projetosIds.length * b.avaliadoresIds.length;
+
+export function PainelCoordenador() {
+  const app = useApp();
+  const nav = useNavigate();
+  const { db } = app;
+  const bancas = bancasVisiveis(app);
+  const emAndamento = bancas.filter((b) => b.resultado !== "publicado" && statusBanca(b) === "aberta");
+  const pendentes = emAndamento.reduce((s, b) => s + Math.max(0, previstasNaBanca(b) - avaliadosNaBanca(db, b)), 0);
+  const prontas = bancas.filter((b) => b.resultado !== "publicado" && statusBanca(b) === "encerrada" && avaliadosNaBanca(db, b) > 0);
+  const semAvaliadores = bancas.filter((b) => b.resultado !== "publicado" && b.avaliadoresIds.length === 0);
+  const atencao = [
+    ...semAvaliadores.map((b) => ({ id: b.id, nome: b.nome, motivo: "Sem avaliadores", destino: "/avaliadores" })),
+    ...prontas.map((b) => ({ id: b.id, nome: b.nome, motivo: "Pronta para publicar o resultado", tone: "info", destino: `/bancas/${b.id}/resultados` })),
+  ];
+  return <P.PainelCoordenadorPage nome={app.usuario.nome} instituicao={app.instituicao?.nome}
+    indicadores={{ abertas: emAndamento.length, avaliacoesPendentes: pendentes, aguardandoPublicacao: prontas.length, semAvaliadores: semAvaliadores.length }}
+    atencao={atencao}
+    proximas={emAndamento.map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), avaliados: avaliadosNaBanca(db, b), previstas: previstasNaBanca(b) }))}
+    onNovaBanca={() => nav("/bancas/nova")} onAbrirBanca={(a) => nav(a.destino || `/bancas/${a.id}`)}
+    onAvaliadores={() => nav("/avaliadores")} onResultados={() => nav("/resultados")} />;
+}
+
+export function AvaliadoresBancas() {
+  const app = useApp();
+  const nav = useNavigate();
+  const { db, instId } = app;
+  const bancas = bancasVisiveis(app).map((b) => ({
+    id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b), totalProjetos: b.projetosIds.length, podeDesignar: b.resultado !== "publicado",
+    avaliadores: b.avaliadoresIds.map((uid) => ({ id: uid, nome: nomeUsuario(db, uid), avaliados: db.avaliacoes.filter((a) => a.bancaId === b.id && a.avaliadorId === uid).length })),
+  }));
+  const disponiveis = comPapelNaInst(db, instId, "avaliador").map(({ id, nome }) => ({ id, nome }));
+  return <P.AvaliadoresBancasPage bancas={bancas} disponiveis={disponiveis} onCriarBanca={() => nav("/bancas/nova")}
+    onSalvar={(bancaId, ids) => app.designarAvaliadores(bancaId, ids)} />;
+}
+
+export function ResultadosBancas() {
+  const app = useApp();
+  const nav = useNavigate();
+  const { db } = app;
+  const bancas = bancasVisiveis(app).map((b) => {
+    const ranking = calcularRanking(db, b);
+    const lider = ranking[0];
+    return {
+      id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b), resultado: b.resultado,
+      avaliados: avaliadosNaBanca(db, b), previstas: previstasNaBanca(b),
+      lider: lider?.projeto, pontuacao: lider?.pontuacao ?? 0, empate: !!lider?.empatado, nomeArquivo: b.nome,
+    };
+  });
+  return <P.ResultadosBancasPage bancas={bancas} onCriarBanca={() => nav("/bancas/nova")}
+    onAbrir={(b) => nav(`/bancas/${b.id}/resultados`)}
+    onPodio={(b) => { document.documentElement.requestFullscreen?.().catch(() => {}); nav(`/bancas/${b.id}/podio`, { state: { auto: true } }); }}
+    onExportar={(b) => exportarExcel({ id: b.id, nome: b.nome })}
+    onPublicar={(b) => window.confirm(`Publicar o resultado de "${b.nome}"? Ele ficará registrado como definitivo.`) && app.publicarResultado(b.id)} />;
+}
+
+// ---------- Orientador ----------
+export function Acompanhamento() {
+  const app = useApp();
+  const nav = useNavigate();
+  const { db } = app;
+  const projetos = projetosVisiveis(app).map((p) => ({
+    id: p.id, nome: p.nome, descricao: p.descricao, status: p.status, equipe: p.equipe, periodo: `${p.ano}/${p.semestre}º semestre`,
+    integrantes: p.alunosIds.map((aid) => db.usuarios.find((u) => u.id === aid)).filter(Boolean).map((u) => ({ id: u.id, nome: u.nome, email: u.email })),
+    bancas: db.bancas.filter((b) => b.projetosIds.includes(p.id)).map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b), resultado: b.resultado })),
+  }));
+  return <P.AcompanhamentoPage nome={app.usuario.nome} instituicao={app.instituicao?.nome} projetos={projetos} onAbrir={(p) => nav(`/projetos/${p.id}`)} />;
+}
+
 // ---------- Avaliador ----------
 const bancaDoAvaliador = (app, id) =>
   app.db.bancas.find((b) => b.id === Number(id) && b.instituicaoId === app.instId && b.avaliadoresIds.includes(app.usuario.id));
+
+export function InicioAvaliador() {
+  const app = useApp();
+  const nav = useNavigate();
+  const minhas = app.db.bancas.filter((b) => b.instituicaoId === app.instId && b.avaliadoresIds.includes(app.usuario.id)).map((b) => ({
+    id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b), fim: b.fim, totalProjetos: b.projetosIds.length,
+    avaliados: app.db.avaliacoes.filter((a) => a.bancaId === b.id && a.avaliadorId === app.usuario.id).length,
+  }));
+  return <P.InicioAvaliadorPage nome={app.usuario.nome} instituicao={app.instituicao?.nome} bancas={minhas}
+    onAbrirBanca={(b) => nav(`/minhas-bancas/${b.id}/avaliar`)} onVerBancas={() => nav("/minhas-bancas")} />;
+}
 
 export function MinhasBancas() {
   const app = useApp();

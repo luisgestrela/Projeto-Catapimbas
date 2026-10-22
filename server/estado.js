@@ -63,7 +63,7 @@ export async function listarProjetos(inst) {
 
 async function listarInstrumentos(inst) {
   const [instrumentos, criterios] = await Promise.all([
-    buscar("instrumento", "id, instituicao_id, nome, arquivado_em", { instituicao_id: inst }),
+    buscar("instrumento", "id, instituicao_id, nome, descricao, arquivado_em", { instituicao_id: inst }),
     buscar("criterio", "id, instrumento_id, ordem, arquivado_em", { instituicao_id: inst }),
   ]);
   const instrumentosAtivos = instrumentos.filter((i) => !i.arquivado_em);
@@ -75,7 +75,7 @@ async function listarInstrumentos(inst) {
   const descPorVersao = agrupar(descritores, "criterio_versao_id");
   const porInstrumento = agrupar(criteriosAtivos, "instrumento_id");
   return instrumentosAtivos.map((i) => ({
-    id: i.id, instituicaoId: i.instituicao_id, nome: i.nome,
+    id: i.id, instituicaoId: i.instituicao_id, nome: i.nome, descricao: i.descricao || "",
     criterios: (porInstrumento.get(i.id) || []).sort((a, b) => a.ordem - b.ordem).map((c) => ultima.get(c.id)).filter(Boolean).map((v) => ({
       id: v.id, versao: v.versao, titulo: v.titulo, descricao: v.descricao || "", peso: Number(v.peso_sugerido),
       escala: { min: v.nota_min, max: v.nota_max },
@@ -147,7 +147,13 @@ export async function montarEstado(req) {
 
     if (gerencia) bancasVisiveis = completas;
     else if (papel === "avaliador") bancasVisiveis = completas.filter((b) => b.avaliadoresIds.includes(usuario.id));
-    else bancasVisiveis = completas.filter((b) => b.projetosIds.some((id) => projetosPropriosIds.includes(id)));
+    else if (papel === "orientador") {
+      // Acompanhamento: só as bancas em que há projetos do orientador, sem avaliadores, critérios nem projetos de terceiros.
+      bancasVisiveis = completas.filter((b) => b.projetosIds.some((id) => projetosPropriosIds.includes(id))).map((b) => ({
+        id: b.id, instituicaoId: b.instituicaoId, nome: b.nome, inicio: b.inicio, fim: b.fim, instrumentoId: b.instrumentoId, resultado: b.resultado,
+        projetosIds: b.projetosIds.filter((id) => projetosPropriosIds.includes(id)), inelegiveisIds: [], avaliadoresIds: [], pesos: {}, criterios: [],
+      }));
+    } else bancasVisiveis = []; // aluno: não há área de bancas, apenas os projetos em que é integrante
 
     const idsBancas = bancasVisiveis.map((b) => b.id);
     const avs = await buscar("avaliacao", "id, banca_id, banca_projeto_id, banca_avaliador_id, versao, protocolo, enviada_em", { ...filtro, status: "enviada" }, ["banca_id", idsBancas]);
@@ -169,33 +175,58 @@ export async function montarEstado(req) {
     });
     if (gerencia) db.avaliacoes = avaliacoesDb;
     else if (papel === "avaliador") db.avaliacoes = avaliacoesDb.filter((a) => a.avaliadorId === usuario.id);
-    else db.avaliacoes = avaliacoesDb.filter((a) => bancaPorId.get(a.bancaId).resultado === "publicado");
+    else db.avaliacoes = []; // orientador e aluno não recebem notas: o resultado é consultado por coordenação e administração
     db.bancas = bancasVisiveis;
 
     const verEmail = temPermissao(papel, "usuario:aprovar") || gerencia;
+    const verContato = verEmail || papel === "orientador"; // o orientador vê o contato dos integrantes dos seus projetos
     const vinculosVisiveis = vinculos.filter((v) => v.situacao !== "revogado" && (verEmail || v.situacao === "ativo"));
     const porUsuario = agrupar(vinculosVisiveis, "usuario_id");
-    const idsUsuarios = new Set([...porUsuario.keys()]);
-    for (const p of todosProjetos) {
-      if (p.orientadorId) idsUsuarios.add(p.orientadorId);
-      p.alunosIds.forEach((a) => idsUsuarios.add(a));
+    const idsUsuarios = new Set();
+    if (papel === "aluno" || papel === "orientador") {
+      // Só as pessoas dos próprios projetos (orientador e colegas de equipe): nada de listar a instituição inteira.
+      for (const p of todosProjetos.filter((x) => projetosPropriosIds.includes(x.id))) {
+        if (p.orientadorId) idsUsuarios.add(p.orientadorId);
+        p.alunosIds.forEach((a) => idsUsuarios.add(a));
+      }
+    } else {
+      porUsuario.forEach((_v, id) => idsUsuarios.add(id));
+      for (const p of todosProjetos) {
+        if (p.orientadorId) idsUsuarios.add(p.orientadorId);
+        p.alunosIds.forEach((a) => idsUsuarios.add(a));
+      }
     }
     idsUsuarios.delete(usuario.id);
     const pessoas = await buscar("usuario", "id, nome, email", {}, ["id", [...idsUsuarios]]);
     db.usuarios = [eu, ...pessoas.map((u) => ({
-      id: u.id, nome: u.nome, email: verEmail ? u.email : "",
+      id: u.id, nome: u.nome, email: verContato ? u.email : "",
       vinculos: (porUsuario.get(u.id) || []).map(mapearVinculo),
     }))];
   } else {
+    // Sem instituição escolhida. O superadmin recebe todas as pessoas com seus vínculos ativos (de qualquer instituição),
+    // para escolher a universidade e o aluno ao cadastrar projetos pela plataforma.
     const ids = new Set();
     todosProjetos.forEach((p) => { if (p.orientadorId) ids.add(p.orientadorId); p.alunosIds.forEach((a) => ids.add(a)); });
     ids.delete(usuario.id);
-    const pessoas = await buscar("usuario", "id, nome", {}, ["id", [...ids]]);
-    db.usuarios = [eu, ...pessoas.map((u) => ({ id: u.id, nome: u.nome, email: "", vinculos: [] }))];
+    if (usuario.superadmin) {
+      const [todosVinculos, pessoas] = await Promise.all([
+        buscar("vinculo_institucional", "usuario_id, papel, situacao, justificativa, solicitado_em, instituicao_id"),
+        buscar("usuario", "id, nome, email"),
+      ]);
+      const ativos = agrupar(todosVinculos.filter((v) => v.situacao === "ativo"), "usuario_id");
+      db.usuarios = [eu, ...pessoas.filter((u) => u.id !== usuario.id).map((u) => ({
+        id: u.id, nome: u.nome, email: u.email, vinculos: (ativos.get(u.id) || []).map(mapearVinculo),
+      }))];
+    } else {
+      const pessoas = await buscar("usuario", "id, nome", {}, ["id", [...ids]]);
+      db.usuarios = [eu, ...pessoas.map((u) => ({ id: u.id, nome: u.nome, email: "", vinculos: [] }))];
+    }
   }
 
   const idsBancaProjetos = new Set(bancasVisiveis.flatMap((b) => b.projetosIds));
-  db.projetos = todosProjetos.filter((p) => projetosPropriosIds.includes(p.id) || idsBancaProjetos.has(p.id));
+  // Aluno e orientador só enxergam os próprios projetos; o avaliador também vê os projetos das bancas em que foi designado.
+  const incluiProjetosDeBanca = papel !== "aluno" && papel !== "orientador";
+  db.projetos = todosProjetos.filter((p) => projetosPropriosIds.includes(p.id) || (incluiProjetosDeBanca && idsBancaProjetos.has(p.id)));
 
   if (inst && gerencia) db.instrumentos = await listarInstrumentos(inst);
   if (inst && temPermissao(papel, "auditoria:ver")) {

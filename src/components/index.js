@@ -8,6 +8,7 @@ export { default as CriterioForm } from "./CriterioForm";
 export { default as DataTable } from "./DataTable";
 export { default as EmptyState } from "./EmptyState";
 export { default as Icon } from "./Icon";
+export { default as InstrumentoAjuda } from "./InstrumentoAjuda";
 export { default as FilterBar } from "./FilterBar";
 export { default as Header } from "./Header";
 export { default as Input } from "./Input";

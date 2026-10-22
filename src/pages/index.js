@@ -25,3 +25,8 @@ export { default as TrocarInstituicaoPage } from "./compartilhadas/TrocarInstitu
 export { default as MinhasBancasPage } from "./avaliador/MinhasBancasPage";
 export { default as AvaliacaoPage } from "./avaliador/AvaliacaoPage";
 export { default as ReciboPage } from "./avaliador/ReciboPage";
+export { default as InicioAvaliadorPage } from "./avaliador/InicioAvaliadorPage";
+export { default as PainelCoordenadorPage } from "./coordenador/PainelCoordenadorPage";
+export { default as AvaliadoresBancasPage } from "./coordenador/AvaliadoresBancasPage";
+export { default as ResultadosBancasPage } from "./coordenador/ResultadosBancasPage";
+export { default as AcompanhamentoPage } from "./orientador/AcompanhamentoPage";

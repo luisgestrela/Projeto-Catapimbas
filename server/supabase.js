@@ -34,6 +34,7 @@ const ERROS_NEGOCIO = {
   nota_fora_da_escala: [400, "Nota fora da escala do critério."],
   justificativa_obrigatoria: [400, "Justificativa obrigatória."],
   nota_imutavel: [409, "Notas enviadas não podem ser alteradas diretamente."],
+  avaliador_com_notas: [409, "Não é possível remover um avaliador que já lançou notas nesta banca."],
   nao_encontrado: [404, "Registro não encontrado."],
 };
 

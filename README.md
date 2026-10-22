@@ -22,10 +22,11 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 |---|---|
 | Visitante | Landing, solicitação de acesso, login, recuperação de senha |
 | Pendente / Recusado | Tela de situação da conta |
-| Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela), solicitações de todas as instituições, e definição de quem administra cada uma |
-| Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões, critérios, auditoria |
-| Coordenador | Dashboard, projetos, bancas (criar, editar, publicar resultado) |
-| Orientador / Aluno | Dashboard, seus projetos, bancas e resultados publicados |
+| Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela); solicitações de todas as instituições (aprovar, recusar ou reavaliar); administradores de cada instituição (escolher alguém que já tem conta ou criar a conta na hora); cadastro de projetos direto da plataforma, escolhendo a universidade |
+| Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões, critérios (criar e **renomear** instrumentos), auditoria |
+| Coordenador | **Painel**, **bancas** (organizar eventos), **avaliadores** (designar por banca e acompanhar notas), **resultados** (ranking, correção de notas, exportação, publicação) e projetos |
+| Orientador | **Acompanhamento** dos projetos vinculados a ele: equipe e integrantes, situação e participação em bancas (somente leitura) |
+| Aluno | Apenas os projetos em que é integrante. Não há área de bancas, resultados nem dashboard |
 | Avaliador | Minhas bancas, avaliação e recibo |
 
 Quem tem mais de um vínculo ativo escolhe a instituição em `/trocar-instituicao` (também pelo botão no topo). As contas de demonstração (senha `12345678`) estão listadas na tela de login.
@@ -60,8 +61,10 @@ src/
 │   ├── publicas/        # landing, login, cadastro, recuperar senha, erros
 │   ├── compartilhadas/  # dashboard, projetos, bancas, resultados, pódio
 │   ├── admin/           # aprovações, pessoas, critérios, auditoria
+│   ├── coordenador/     # painel, designação de avaliadores, resultados das bancas
+│   ├── orientador/      # acompanhamento dos projetos orientados
 │   ├── avaliador/       # minhas bancas, avaliação, recibo
-│   └── superadmin/      # instituições
+│   └── superadmin/      # instituições, solicitações e administradores da plataforma
 ├── routes/
 │   ├── AppRoutes.jsx    # rotas e restrição por papel
 │   └── telas.jsx        # liga cada página aos dados e às ações
@@ -79,10 +82,14 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 |---|---|
 | `/`, `/login`, `/cadastro`, `/recuperar-senha`, `/conta-pendente` | Públicas |
 | `/instituicoes`, `/instituicoes/nova`, `/instituicoes/:id/editar`, `/plataforma/solicitacoes`, `/plataforma/administradores` | Superadmin |
-| `/dashboard`, `/projetos`, `/projetos/:id`, `/projetos/novo` | Área institucional |
-| `/bancas`, `/bancas/:id`, `/bancas/:id/resultados`, `/bancas/:id/podio` | Bancas e resultados |
+| `/dashboard` | Administrador |
+| `/projetos`, `/projetos/:id` | Gestão (todos), orientador e aluno (só os vinculados a eles) |
+| `/projetos/novo`, `/projetos/:id/editar` | Administrador, coordenador e superadmin |
+| `/painel`, `/avaliadores`, `/resultados` | Coordenador (as duas últimas também o administrador) |
+| `/bancas`, `/bancas/:id`, `/bancas/:id/resultados`, `/bancas/:id/podio` | Administrador e coordenador |
+| `/acompanhamento` | Orientador |
 | `/aprovacoes`, `/pessoas`, `/criterios`, `/auditoria` | Administrador |
-| `/minhas-bancas`, `/minhas-bancas/:id/avaliar`, `/minhas-bancas/:id/recibo/:avaliacaoId` | Avaliador |
+| `/inicio`, `/minhas-bancas`, `/minhas-bancas/:id/avaliar`, `/minhas-bancas/:id/recibo/:avaliacaoId` | Avaliador |
 
 ## Design e acessibilidade
 
@@ -97,7 +104,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 
 ### 1. Criar o banco
 
-No projeto Supabase, abra **SQL Editor** e execute, **nesta ordem**, `supabase/migrations/20261021000000_schema.sql` e `supabase/migrations/20261021000100_backend_colunas.sql` (ou use `supabase db push` com a CLI, que aplica todas na ordem do nome do arquivo). A segunda migração é aditiva e idempotente: só adiciona colunas usadas pelo backend (`usuario.ultimo_login_em`, `tentativas_login_falhas`, `bloqueado_ate`, `anonimizado_em` e `auditoria.ip`). A migração cria tabelas, restrições (PK, FK compostas com `instituicao_id`, UNIQUE, CHECK), índices, gatilhos, funções transacionais (`salvar_projeto`, `salvar_banca`, `salvar_criterio`, `enviar_avaliacao`, `corrigir_nota`, `publicar_resultado`), papéis/permissões iniciais e habilita RLS em todas as tabelas sem políticas para `anon`/`authenticated`. Somente a API, com a chave `service_role`, acessa os dados.
+No projeto Supabase, abra **SQL Editor** e execute, **nesta ordem**, `supabase/migrations/20261021000000_schema.sql` e `supabase/migrations/20261021000100_backend_colunas.sql` e, depois, `supabase/migrations/20261022000000_fluxos_por_perfil.sql` (ou use `supabase db push` com a CLI, que aplica todas na ordem do nome do arquivo). A terceira migração ajusta as permissões por perfil (aluno sem bancas/resultados; orientador somente leitura) e cria a função `designar_avaliadores`, usada pelo coordenador. A segunda migração é aditiva e idempotente: só adiciona colunas usadas pelo backend (`usuario.ultimo_login_em`, `tentativas_login_falhas`, `bloqueado_ate`, `anonimizado_em` e `auditoria.ip`). A migração cria tabelas, restrições (PK, FK compostas com `instituicao_id`, UNIQUE, CHECK), índices, gatilhos, funções transacionais (`salvar_projeto`, `salvar_banca`, `salvar_criterio`, `enviar_avaliacao`, `corrigir_nota`, `publicar_resultado`), papéis/permissões iniciais e habilita RLS em todas as tabelas sem políticas para `anon`/`authenticated`. Somente a API, com a chave `service_role`, acessa os dados.
 
 ### 2. Configurar variáveis
 
@@ -161,16 +168,16 @@ Lê `supabase/migrations/*.sql` e confere se toda tabela, coluna, relacionamento
 | `GET /api/instituicoes/publicas` | pública |
 | `GET /api/estado` | autenticado (dados filtrados por papel) |
 | `POST/PUT /api/instituicoes`, `PATCH /api/instituicoes/:id/status` | superadmin |
-| `GET /api/plataforma/solicitacoes`, `POST /api/plataforma/solicitacoes/:id/aprovar\|recusar` | superadmin (todas as instituições) |
-| `GET /api/plataforma/administradores`, `POST /api/plataforma/instituicoes/:id/administradores`, `DELETE /api/plataforma/administradores/:vinculoId` | superadmin |
+| `GET /api/plataforma/solicitacoes`, `POST /api/plataforma/solicitacoes/:id/aprovar\|recusar` | superadmin (todas as instituições; uma recusada pode ser aprovada depois) |
+| `GET /api/plataforma/administradores`, `GET /api/plataforma/usuarios`, `POST /api/plataforma/instituicoes/:id/administradores` (`usuarioId`, `email` ou `nome`+`email`+`senha`), `DELETE /api/plataforma/administradores/:vinculoId` | superadmin (não exigem instituição selecionada) |
 | `POST /api/solicitacoes/:usuarioId/aprovar` e `/recusar` | administrador |
 | `PATCH /api/usuarios/:usuarioId/papel` e `/bloqueio`, `DELETE /api/usuarios/:usuarioId/vinculo` | administrador |
-| `POST /api/projetos`, `PUT /api/projetos/:id` | administrador, coordenador, orientador (apenas os próprios) |
-| `POST /api/instrumentos`, `POST /api/instrumentos/:id/criterios` | administrador |
-| `POST/PUT /api/bancas`, `POST /api/bancas/:id/publicar` | administrador, coordenador |
+| `POST /api/projetos`, `PUT /api/projetos/:id` | administrador, coordenador; superadmin também pela plataforma (informa `instituicaoId`) |
+| `POST /api/instrumentos`, `PUT /api/instrumentos/:id` (renomear), `POST /api/instrumentos/:id/criterios` | administrador |
+| `POST/PUT /api/bancas`, `PUT /api/bancas/:id/avaliadores`, `POST /api/bancas/:id/publicar` | administrador, coordenador |
 | `POST /api/bancas/:id/avaliacoes` | avaliador designado |
 | `PATCH /api/avaliacoes/:id/notas/:criterioId` | administrador, coordenador |
-| `GET /api/bancas/:id/ranking`, `GET /api/bancas/:id/exportacao` | gestores; demais papéis só com resultado publicado |
+| `GET /api/bancas/:id/ranking`, `GET /api/bancas/:id/exportacao` | administrador e coordenador |
 | `GET /api/relatorios/exportacao/projetos` | filtros e permissões do solicitante |
 
 ### Limitações conhecidas

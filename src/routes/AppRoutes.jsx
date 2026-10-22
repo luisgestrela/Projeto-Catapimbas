@@ -94,25 +94,34 @@ export default function AppRoutes() {
         <Route path="/plataforma/solicitacoes" element={soSuper(<T.SolicitacoesPlataforma />)} />
         <Route path="/plataforma/administradores" element={soSuper(<T.AdministradoresPlataforma />)} />
 
-        <Route path="/dashboard" element={so(INSTITUCIONAL, <T.Dashboard />)} />
+        <Route path="/dashboard" element={so(["administrador"], <T.Dashboard />)} />
 
+        {/* Projetos: gestão vê todos; orientador e aluno só os vinculados a eles. */}
         <Route path="/projetos" element={so(["superadmin", ...INSTITUCIONAL], <T.Projetos />)} />
-        <Route path="/projetos/novo" element={so([...GESTAO, "orientador"], <T.ProjetoForm />)} />
+        <Route path="/projetos/novo" element={so(["superadmin", ...GESTAO], <T.ProjetoForm />)} />
         <Route path="/projetos/:id" element={so(["superadmin", ...INSTITUCIONAL], <T.ProjetoDetalhe />)} />
-        <Route path="/projetos/:id/editar" element={so([...GESTAO, "orientador"], <T.ProjetoForm />)} />
+        <Route path="/projetos/:id/editar" element={so(["superadmin", ...GESTAO], <T.ProjetoForm />)} />
 
-        <Route path="/bancas" element={so(INSTITUCIONAL, <T.Bancas />)} />
+        {/* Coordenador: organiza bancas, designa avaliadores e consulta resultados. O aluno não tem área de bancas. */}
+        <Route path="/painel" element={so(["coordenador"], <T.PainelCoordenador />)} />
+        <Route path="/avaliadores" element={so(GESTAO, <T.AvaliadoresBancas />)} />
+        <Route path="/resultados" element={so(GESTAO, <T.ResultadosBancas />)} />
+        <Route path="/bancas" element={so(GESTAO, <T.Bancas />)} />
         <Route path="/bancas/nova" element={so(GESTAO, <T.BancaForm />)} />
-        <Route path="/bancas/:id" element={so(INSTITUCIONAL, <T.BancaDetalhe />)} />
+        <Route path="/bancas/:id" element={so(GESTAO, <T.BancaDetalhe />)} />
         <Route path="/bancas/:id/editar" element={so(GESTAO, <T.BancaForm />)} />
-        <Route path="/bancas/:id/resultados" element={so(INSTITUCIONAL, <T.Resultados />)} />
-        <Route path="/bancas/:id/podio" element={so(INSTITUCIONAL, <T.Podio />)} />
+        <Route path="/bancas/:id/resultados" element={so(GESTAO, <T.Resultados />)} />
+        <Route path="/bancas/:id/podio" element={so(GESTAO, <T.Podio />)} />
+
+        {/* Orientador: acompanha os projetos vinculados a ele e seus integrantes. */}
+        <Route path="/acompanhamento" element={so(["orientador"], <T.Acompanhamento />)} />
 
         <Route path="/aprovacoes" element={so(["administrador"], <T.Aprovacoes />)} />
         <Route path="/pessoas" element={so(["administrador"], <T.Pessoas />)} />
         <Route path="/criterios" element={so(["administrador"], <T.Criterios />)} />
         <Route path="/auditoria" element={so(["administrador"], <T.Auditoria />)} />
 
+        <Route path="/inicio" element={so(["avaliador"], <T.InicioAvaliador />)} />
         <Route path="/minhas-bancas" element={so(["avaliador"], <T.MinhasBancas />)} />
         <Route path="/minhas-bancas/:id/avaliar" element={so(["avaliador"], <T.Avaliacao />)} />
         <Route path="/minhas-bancas/:id/recibo/:avaliacaoId" element={so(["avaliador"], <T.Recibo />)} />
