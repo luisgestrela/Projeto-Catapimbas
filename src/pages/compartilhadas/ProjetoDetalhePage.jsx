@@ -12,7 +12,7 @@ export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, p
     <>
       <PageHeader title={projeto.nome || "Projeto"} subtitle={`${projeto.ano || ""}/${projeto.semestre || ""}${projeto.instituicao ? ` · ${projeto.instituicao}` : ""}`}
         actions={<><Button variant="secondary" onClick={onVoltar}>Voltar</Button>{podeEditar && <Button onClick={onEditar}>Editar</Button>}</>} />
-      <ProjetoAcessoRapido projetoId={projeto.id} projetoNome={projeto.nome} bancas={projeto.bancas} podeGerar={podeGerarAcesso} onGerarLink={onGerarLink} />
+      {podeGerarAcesso && <ProjetoAcessoRapido projetoId={projeto.id} projetoNome={projeto.nome} bancas={projeto.bancas} podeGerar onGerarLink={onGerarLink} />}
       <Card title="Resumo" actions={<Badge status={projeto.status} />}>
         <p>{projeto.descricao || "Sem descrição."}</p>
         <p><strong>Orientador:</strong> {projeto.orientador || "—"}</p>

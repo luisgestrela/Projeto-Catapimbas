@@ -11,6 +11,10 @@ const r = Router();
 r.use(exigeInstituicao);
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
+const somenteAdmin = (req, _res, next) => {
+  if (req.papel === "administrador" || req.papel === "superadmin") return next();
+  next(new ErroHttp(403, "Somente administradores podem gerar links individuais de avaliação."));
+};
 
 function dadosBanca(b = {}) {
   if (!DATA.test(b.inicio || "") || !DATA.test(b.fim || "")) throw invalido("Período inválido.");
@@ -45,7 +49,7 @@ r.put("/:id/avaliadores", exigePermissao("banca:gerir"), async (req, res) => {
 
 // Gera um link individual, vinculado a um avaliador, banca e projeto. O token puro
 // só é devolvido nesta resposta e o banco guarda apenas o hash SHA-256.
-r.post("/:id/projetos/:projetoId/acesso", exigePermissao("banca:gerir"), async (req, res) => {
+r.post("/:id/projetos/:projetoId/acesso", exigePermissao("banca:gerir"), somenteAdmin, async (req, res) => {
   const bancaId = inteiro(req.params.id, "id");
   const projetoId = inteiro(req.params.projetoId, "projetoId");
   const avaliadorId = inteiro(req.body?.avaliadorId, "avaliadorId");

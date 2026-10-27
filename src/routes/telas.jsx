@@ -272,7 +272,7 @@ export function ProjetoDetalhe() {
     .map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b),
       avaliadores: b.avaliadoresIds.map((uid) => ({ id: uid, nome: nomeUsuario(app.db, uid) })) })) : undefined;
   return <P.ProjetoDetalhePage projeto={{ ...p, orientador: nomeUsuario(app.db, p.orientadorId), integrantes, bancas, instituicao: app.papel === "superadmin" ? nomeInstituicao(app.db, p.instituicaoId) : "" }}
-    podeEditar={podeEditarProjeto(app)} podeGerarAcesso={gerencia(app.papel)}
+    podeEditar={podeEditarProjeto(app)} podeGerarAcesso={app.papel === "administrador" || app.papel === "superadmin"}
     onGerarLink={(bancaId, avaliadorId) => app.gerarLinkAvaliacao(bancaId, p.id, avaliadorId)}
     onEditar={() => nav(`/projetos/${p.id}/editar`)} onVoltar={() => nav("/projetos")} />;
 }
