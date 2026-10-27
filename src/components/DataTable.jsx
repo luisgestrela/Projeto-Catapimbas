@@ -8,7 +8,7 @@ export default function DataTable({ columns = [], rows = [], rowKey = "id", empt
         <tbody>
           {rows.map((r, i) => (
             <tr key={r[rowKey] ?? i}>
-              {columns.map((c) => <td key={c.key} className={c.numeric ? "num" : undefined}>{c.render ? c.render(r) : r[c.key]}</td>)}
+              {columns.map((c) => <td key={c.key} data-label={c.header || undefined} className={c.numeric ? "num" : undefined}>{c.render ? c.render(r) : r[c.key]}</td>)}
             </tr>
           ))}
         </tbody>

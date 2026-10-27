@@ -2,7 +2,7 @@ import { Router } from "express";
 import { auditar } from "../auditoria.js";
 import { exigeInstituicao, exigePermissao, gerarHash, papelValido } from "../auth.js";
 import { ErroHttp, consultar, supabase } from "../supabase.js";
-import { EMAIL, PAPEIS, inteiro, invalido, opcao, texto } from "../validar.js";
+import { EMAIL, PAPEIS, PAPEIS_CADASTRAVEIS, inteiro, invalido, opcao, texto } from "../validar.js";
 
 const r = Router();
 r.use(exigeInstituicao, exigePermissao("usuario:aprovar", "usuario:permissao"));
@@ -25,33 +25,39 @@ const naoProprio = (req, usuarioId) => {
 const atualizar = (req, id, campos) =>
   consultar(supabase.from("vinculo_institucional").update(campos).eq("id", id).eq("instituicao_id", req.instituicaoId));
 
+// Cadastro direto pelo administrador (avaliador ou aluno): cria o acesso com e-mail e senha e já ativa o vínculo,
+// sem solicitação de cadastro. Quando o papel não é informado, mantém o comportamento anterior (avaliador).
 r.post("/", async (req, res) => {
   const nome = texto(req.body?.nome, "nome", { min: 2, max: 120 });
   const email = normalizarEmail(req.body?.email);
   if (!EMAIL.test(email) || email.length > 160) throw invalido("E-mail inválido.", { email: "E-mail inválido." });
   const senha = String(req.body?.senha || "");
   if (senha.length < 8 || senha.length > 72) throw invalido("A senha deve ter entre 8 e 72 caracteres.", { senha: "Use entre 8 e 72 caracteres." });
+  // O papel é conferido antes de qualquer gravação, para não deixar um usuário criado pela metade.
+  const papel = await papelValido(opcao(req.body?.papel ?? "avaliador", "papel", PAPEIS_CADASTRAVEIS));
 
   let usuario = await consultar(supabase.from("usuario").select("id, status, superadmin").eq("email", email).maybeSingle());
   if (usuario?.superadmin) throw new ErroHttp(409, "Este e-mail pertence a um superadministrador.");
+  const existente = usuario
+    ? await consultar(
+      supabase.from("vinculo_institucional").select("id, situacao").eq("instituicao_id", req.instituicaoId).eq("usuario_id", usuario.id).maybeSingle(),
+    )
+    : null;
+  if (existente && ["ativo", "bloqueado", "pendente"].includes(existente.situacao)) {
+    throw new ErroHttp(409, "Este e-mail já possui vínculo com a instituição.");
+  }
+
   if (!usuario) {
     usuario = await consultar(supabase.from("usuario").insert({ nome, email, hash_senha: await gerarHash(senha) }).select("id, status, superadmin").single());
   } else {
     await consultar(supabase.from("usuario").update({ nome, hash_senha: await gerarHash(senha), status: "ativo" }).eq("id", usuario.id));
   }
 
-  const papel = await papelValido(opcao("avaliador", "papel", PAPEIS));
-  const existente = await consultar(
-    supabase.from("vinculo_institucional").select("id, situacao").eq("instituicao_id", req.instituicaoId).eq("usuario_id", usuario.id).maybeSingle(),
-  );
-  if (existente && ["ativo", "bloqueado", "pendente"].includes(existente.situacao)) {
-    throw new ErroHttp(409, "Este e-mail já possui vínculo com a instituição.");
-  }
   const campos = { papel, situacao: "ativo", justificativa: null, decidido_em: new Date().toISOString(), decidido_por: req.usuario.id, solicitado_em: new Date().toISOString() };
   if (existente) await atualizar(req, existente.id, campos);
   else await consultar(supabase.from("vinculo_institucional").insert({ ...campos, instituicao_id: req.instituicaoId, usuario_id: usuario.id }));
-  await auditar(req, req.instituicaoId, "aprovacao", nome, "Cadastrado diretamente como avaliador");
-  res.status(201).json({ id: usuario.id });
+  await auditar(req, req.instituicaoId, "aprovacao", nome, `Cadastrado diretamente como ${papel}`);
+  res.status(201).json({ id: usuario.id, papel });
 });
 
 r.post("/:usuarioId/aprovar", async (req, res) => {

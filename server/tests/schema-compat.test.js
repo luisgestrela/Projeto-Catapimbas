@@ -288,7 +288,7 @@ describe("compatibilidade entre migrações SQL e backend", () => {
       for (const m of codigo.matchAll(/temPermissao\([^,)]+,\s*"([\w:]+)"\)/g)) {
         if (!permissoesSql.has(m[1])) erros.push(`${nome}: permissão "${m[1]}" não existe`);
       }
-      for (const m of codigo.matchAll(/export const PAPEIS(?:_SOLICITAVEIS)? = \[([^\]]*)\]/g)) {
+      for (const m of codigo.matchAll(/export const PAPEIS(?:_SOLICITAVEIS|_CADASTRAVEIS)? = \[([^\]]*)\]/g)) {
         for (const p of m[1].matchAll(/"(\w+)"/g)) if (!papeisSql.has(p[1])) erros.push(`${nome}: papel "${p[1]}" não existe`);
       }
     }

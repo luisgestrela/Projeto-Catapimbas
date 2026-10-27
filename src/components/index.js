@@ -17,6 +17,7 @@ export { default as Modal } from "./Modal";
 export { default as PageHeader } from "./PageHeader";
 export { default as Pagination } from "./Pagination";
 export { default as Podium } from "./Podium";
+export { default as Progresso } from "./Progresso";
 export { default as RatingInput } from "./RatingInput";
 export { default as Select } from "./Select";
 export { default as Sidebar } from "./Sidebar";

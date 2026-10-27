@@ -1,0 +1,92 @@
+/* ==========================================================================
+   Responsividade: celular (até 560px), tablet (561 a 1100px) e computador.
+   Carregado depois de global.css e motion.css; só ajusta, não redefine o visual.
+   ========================================================================== */
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+img, video { max-width: 100%; height: auto; }
+.app { min-height: 100vh; min-height: 100dvh; }
+.content > *, .page-enter > * { min-width: 0; }
+.field input, .field select, .field textarea { max-width: 100%; }
+
+/* ---------- tablet e notebook pequeno: menu lateral mais estreito ---------- */
+@media (min-width: 861px) and (max-width: 1100px) {
+  .app { grid-template-columns: 220px minmax(0, 1fr); }
+  .topbar { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .content { padding: 1.5rem 1.25rem 2.5rem; }
+  .sidebar a.nav-item { padding-left: .7rem; padding-right: .7rem; }
+}
+
+/* ---------- tablet em pé e celulares: menu em gaveta (já definido em global.css) ---------- */
+@media (max-width: 860px) {
+  .topbar { flex-wrap: wrap; row-gap: .4rem; padding-top: max(.7rem, env(safe-area-inset-top, 0px)); }
+  .topbar > .row { min-width: 0; }
+  .topbar > .row:first-child { flex: 1 1 auto; }
+  .topbar > .row:first-child > strong { max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .content { padding-left: max(1rem, env(safe-area-inset-left, 0px)); padding-right: max(1rem, env(safe-area-inset-right, 0px)); padding-bottom: max(3rem, env(safe-area-inset-bottom, 0px)); }
+  .modal { max-height: 90vh; max-height: 90dvh; }
+
+  /* Botão de envio da avaliação sempre à mão, sem precisar rolar até o fim dos critérios. */
+  .acoes-fixas { position: sticky; bottom: 0; z-index: 5; padding: .75rem 0 max(.75rem, env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); }
+}
+
+/* ---------- celulares ---------- */
+@media (max-width: 640px) {
+  /* Tabelas viram uma lista de cartões: cada célula mostra o seu rótulo (data-label, vindo do DataTable). */
+  .table-wrap { border: 0; background: transparent; box-shadow: none; overflow: visible; border-radius: 0; }
+  .card .table-wrap { margin: 0; }
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .table-wrap tr { margin-bottom: .75rem; padding: .35rem .9rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+  .table-wrap tr:last-child { margin-bottom: 0; }
+  .table-wrap td { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px dashed var(--line); text-align: right; overflow-wrap: anywhere; }
+  .table-wrap tr td:last-child { border-bottom: 0; }
+  .table-wrap td::before { content: attr(data-label); flex: none; max-width: 45%; font-size: .78rem; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); text-align: left; overflow-wrap: normal; }
+  .table-wrap td:not([data-label])::before { content: none; }
+  .table-wrap td:not([data-label]) { justify-content: flex-start; }
+  .table-wrap td .row { justify-content: flex-end; }
+  .table-wrap td select { max-width: 100%; }
+  .table-wrap td .btn-ghost { text-align: right; white-space: normal; }
+  .table-wrap tbody tr:hover { box-shadow: var(--shadow-sm); }
+}
+
+@media (max-width: 560px) {
+  .content { padding-top: 1.25rem; gap: 1.1rem; }
+  .card { padding: 1rem; }
+  h1, .page-header h1 { font-size: 1.4rem; }
+
+  /* Ações do cabeçalho ocupam a largura toda, com botões fáceis de tocar. */
+  .page-header > .row { width: 100%; }
+  .page-header > .row > .btn { flex: 1 1 calc(50% - .65rem); }
+
+  /* Janelas viram "folha" ancorada na base da tela. */
+  .modal-backdrop { align-items: end; padding: 0; }
+  .modal { max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 1.25rem 1rem max(1.25rem, env(safe-area-inset-bottom, 0px)); max-height: 92vh; max-height: 92dvh; }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions .btn { width: 100%; }
+
+  .rating-options { grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); }
+  .projeto-status { padding: .7rem .8rem; }
+  .projeto-status > .btn { width: 100%; }
+  .pagination { justify-content: center; }
+  .topbar .user-name { display: none; }
+  .card-head > .btn, .card-head > .row { width: 100%; }
+}
+
+/* ---------- telas de toque: alvos com pelo menos ~44px ---------- */
+@media (pointer: coarse) {
+  .btn-sm { min-height: 2.75rem; }
+  .chip { min-height: 2.75rem; }
+  .check { min-height: 2.75rem; }
+  .check input { width: 1.35rem; height: 1.35rem; }
+  .rating-options button { min-height: 4.4rem; }
+}
+
+/* ---------- impressão (recibo da avaliação): só o conteúdo ---------- */
+@media print {
+  .sidebar, .topbar, .scrim, .skip-link, .page-header .row, .acoes-fixas { display: none !important; }
+  .app { display: block; }
+  .content { padding: 0; max-width: none; }
+  .card, .table-wrap { box-shadow: none; }
+  .page-enter > * { animation: none !important; }
+}

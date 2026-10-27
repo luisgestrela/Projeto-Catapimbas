@@ -1,4 +1,4 @@
-import { PageHeader, Card, Badge, Button, EmptyState, StatCard } from "../../components";
+import { PageHeader, Card, Badge, Button, EmptyState, StatCard, Progresso } from "../../components";
 
 const PASSOS = [
   { t: "Escolha a banca", d: "Em “Minhas bancas” aparecem os grupos de avaliação para os quais você foi designado." },
@@ -60,6 +60,11 @@ export default function InicioAvaliadorPage({ nome = "", instituicao, bancas = [
             {bancas.map((b) => (
               <Card key={b.id} title={b.nome} actions={<Badge status={b.status} />}>
                 <p className="muted">{b.periodo}{b.status === "aberta" ? ` · você pode avaliar até ${data(b.fim)}` : ""}</p>
+                <div className="row">
+                  <Badge tone="success">{b.avaliados ?? 0} {(b.avaliados ?? 0) === 1 ? "avaliado" : "avaliados"}</Badge>
+                  <Badge tone={pendentes(b) > 0 ? "warning" : "neutral"}>{pendentes(b)} {pendentes(b) === 1 ? "pendente" : "pendentes"}</Badge>
+                </div>
+                <Progresso feitos={b.avaliados ?? 0} total={b.totalProjetos ?? 0} rotulo={`Projetos avaliados por você em ${b.nome}`} />
                 <p>{b.avaliados ?? 0} de {b.totalProjetos ?? 0} projetos avaliados por você</p>
                 <Button disabled={b.status !== "aberta"} onClick={() => onAbrirBanca?.(b)}>
                   {b.status !== "aberta" ? "Banca encerrada" : pendentes(b) === 0 ? "Revisar projetos" : "Avaliar projetos"}

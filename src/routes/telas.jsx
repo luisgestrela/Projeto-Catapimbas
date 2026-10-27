@@ -178,7 +178,7 @@ export function Pessoas() {
     .map((v) => ({ id: u.id, nome: u.nome, email: u.email, papel: v.papel, situacao: v.situacao })));
   const proprio = (v) => v.id === app.usuario.id && window.alert("Você não pode alterar o seu próprio acesso.") === undefined;
   return <P.PessoasPermissoesPage vinculos={vinculos}
-    onCadastrarAvaliador={app.cadastrarAvaliador}
+    onCadastrar={app.cadastrarPessoa}
     onAlterarPapel={(v, p) => !proprio(v) && app.alterarPapel(v.id, p)}
     onBloquear={(v, b) => !proprio(v) && app.bloquear(v.id, b)}
     onRevogar={(v) => !proprio(v) && window.confirm(`Revogar o acesso de ${v.nome}?`) && app.revogar(v.id)} />;
@@ -319,7 +319,10 @@ export function BancaDetalhe() {
   const { db } = app;
   const banca = {
     nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b),
-    projetos: b.projetosIds.map((pid) => db.projetos.find((p) => p.id === pid)).filter(Boolean),
+    // Cada projeto mostra quantas avaliações já chegaram em relação às previstas (uma por avaliador designado).
+    projetos: b.projetosIds.map((pid) => db.projetos.find((p) => p.id === pid)).filter(Boolean).map((p) => ({
+      ...p, previstas: b.avaliadoresIds.length, recebidas: db.avaliacoes.filter((a) => a.bancaId === b.id && a.projetoId === p.id).length,
+    })),
     avaliadores: b.avaliadoresIds.map((uid) => ({
       nome: nomeUsuario(db, uid), total: b.projetosIds.length,
       avaliados: db.avaliacoes.filter((a) => a.bancaId === b.id && a.avaliadorId === uid).length,
@@ -525,15 +528,17 @@ export function Avaliacao() {
   const b = bancaDoAvaliador(app, id);
   if (!b || statusBanca(b) !== "aberta") return <SemAcesso texto="Esta banca não está aberta para você avaliar." />;
   const { db, usuario } = app;
-  const jaFeitas = db.avaliacoes.filter((a) => a.bancaId === b.id && a.avaliadorId === usuario.id).map((a) => a.projetoId);
+  // projetoId -> avaliação que este avaliador já enviou nesta banca (a regra é uma por projeto, por avaliador).
+  const feitas = new Map(db.avaliacoes.filter((a) => a.bancaId === b.id && a.avaliadorId === usuario.id).map((a) => [a.projetoId, a.id]));
   const projetos = b.projetosIds.map((pid) => db.projetos.find((p) => p.id === pid)).filter(Boolean)
-    .map((p) => ({ id: p.id, nome: p.nome, jaAvaliado: jaFeitas.includes(p.id) }));
+    .map((p) => ({ id: p.id, nome: p.nome, jaAvaliado: feitas.has(p.id), avaliacaoId: feitas.get(p.id) }));
   const criterios = b.criterios || [];
   return <P.AvaliacaoPage banca={b} projetos={projetos} criterios={criterios} projetoInicialId={params.get("projeto") || ""} erro={erro}
+    onVerRecibo={(p) => nav(`/minhas-bancas/${b.id}/recibo/${p.avaliacaoId}`)}
     onSubmit={async ({ projetoId, notas }) => {
-      if (jaFeitas.includes(Number(projetoId))) return setErro("Você já avaliou este projeto nesta banca.");
+      if (feitas.has(Number(projetoId))) return setErro("Você já avaliou este projeto nesta banca.");
       const r = await app.enviarAvaliacao(b.id, projetoId, notas);
-      if (r.erro) return setErro(r.erro);
+      if (r.erro) return setErro(r.duplicada ? "Você já avaliou este projeto nesta banca. A lista foi atualizada." : r.erro);
       setErro("");
       nav(`/minhas-bancas/${b.id}/recibo/${r.id}`);
     }} />;
@@ -545,10 +550,16 @@ export function Recibo() {
   const { avaliacaoId } = useParams();
   const a = app.db.avaliacoes.find((x) => x.id === Number(avaliacaoId) && x.avaliadorId === app.usuario.id);
   if (!a) return <SemAcesso />;
+  const banca = app.db.bancas.find((b) => b.id === a.bancaId);
+  // Próximo projeto ainda sem nota deste avaliador (só enquanto a banca estiver aberta).
+  const feitos = new Set(app.db.avaliacoes.filter((x) => x.bancaId === a.bancaId && x.avaliadorId === app.usuario.id).map((x) => x.projetoId));
+  const pendentes = banca && statusBanca(banca) === "aberta" ? banca.projetosIds.filter((pid) => !feitos.has(pid)) : [];
   const recibo = {
     protocolo: a.protocolo, data: a.data, avaliador: app.usuario.nome,
-    banca: app.db.bancas.find((b) => b.id === a.bancaId)?.nome, projeto: app.db.projetos.find((p) => p.id === a.projetoId)?.nome,
+    banca: banca?.nome, projeto: app.db.projetos.find((p) => p.id === a.projetoId)?.nome,
     notas: a.criterios.map((c) => ({ criterio: c.titulo, nota: a.notas[c.id] })),
   };
-  return <P.ReciboPage recibo={recibo} onVoltar={() => nav("/minhas-bancas")} />;
+  return <P.ReciboPage recibo={recibo} pendentes={pendentes.length}
+    onProximo={() => nav(`/minhas-bancas/${a.bancaId}/avaliar?projeto=${pendentes[0]}`)}
+    onVoltar={() => nav("/minhas-bancas")} />;
 }

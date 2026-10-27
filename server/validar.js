@@ -37,3 +37,5 @@ export function opcao(valor, campo, permitidos) {
 export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const PAPEIS = ["administrador", "coordenador", "orientador", "avaliador", "aluno"];
 export const PAPEIS_SOLICITAVEIS = ["coordenador", "orientador", "avaliador", "aluno"];
+// Papéis que o administrador pode cadastrar diretamente (com e-mail e senha), sem passar pela aprovação.
+export const PAPEIS_CADASTRAVEIS = ["avaliador", "aluno"];

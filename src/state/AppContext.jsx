@@ -92,7 +92,7 @@ export function AppProvider({ children }) {
     } catch (e) {
       if (e.status === 401) { await carregar(); return { erro: e.message }; }
       if (!silencioso) window.alert(e.message);
-      return { erro: e.message, campos: e.campos };
+      return { erro: e.message, campos: e.campos, status: e.status };
     }
   };
 
@@ -166,7 +166,11 @@ export function AppProvider({ children }) {
     alterarPapel: (userId, novo) => acao(() => api.patch(`/usuarios/${userId}/papel`, { papel: novo })),
     bloquear: (userId, bloquear) => acao(() => api.patch(`/usuarios/${userId}/bloqueio`, { bloquear })),
     revogar: (userId) => acao(() => api.del(`/usuarios/${userId}/vinculo`)),
-    cadastrarAvaliador: (dados) => acao(() => api.post("/usuarios", dados), { silencioso: true }),
+    // Cadastro direto pelo administrador. `dados.papel` é "aluno" ou "avaliador" (o servidor assume avaliador se vier vazio).
+    cadastrarPessoa: (dados) => acao(() => api.post("/usuarios", {
+      nome: dados.nome, email: dados.email, senha: dados.senha, papel: dados.papel || "avaliador",
+    }), { silencioso: true }),
+    cadastrarAvaliador: (dados) => api_.cadastrarPessoa({ ...dados, papel: "avaliador" }),
     novoInstrumento: (nome, descricao) => acao(() => api.post("/instrumentos", { nome, descricao }), { silencioso: true }),
     editarInstrumento: (id, nome, descricao) => acao(() => api.put(`/instrumentos/${id}`, { nome, descricao }), { silencioso: true }),
     salvarCriterio: (instrumentoId, criterio) => acao(() => api.post(`/instrumentos/${instrumentoId}/criterios`, {
@@ -199,7 +203,11 @@ export function AppProvider({ children }) {
       acao(() => api.patch(`/avaliacoes/${avaliacaoId}/notas/${criterioId}`, { nota: nova, justificativa }), { silencioso: true }),
     async enviarAvaliacao(bancaId, projetoId, notas) {
       const r = await acao(() => api.post(`/bancas/${bancaId}/avaliacoes`, { projetoId: Number(projetoId), notas }), { silencioso: true });
-      if (r.erro) return { erro: r.erro };
+      if (r.erro) {
+        // 409 = avaliação duplicada (por exemplo, enviada por outro aparelho): atualiza a lista para mostrar o projeto como avaliado.
+        if (r.status === 409) await carregar().catch(() => {});
+        return { erro: r.erro, duplicada: r.status === 409 };
+      }
       return { id: r.resultado.id };
     },
   };

@@ -11,9 +11,12 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 - **Projetos e bancas.** Cadastro, filtros, paginação, detalhes, equipes e avaliadores designados.
 - **Acesso rápido aos projetos.** Cada projeto possui link direto copiável e QR Code para compartilhamento com avaliadores; o destino é preservado após o login.
 - **Links individuais de avaliação.** Administradores e coordenadores podem gerar um link temporário, vinculado a uma banca, projeto e avaliador. O token é armazenado apenas como hash, expira em 2 horas, é consumido uma única vez e cria a sessão do avaliador para levá-lo diretamente à avaliação.
-- **Cadastro administrativo de avaliadores.** Administradores podem criar o acesso do avaliador com e-mail e senha e ativar o vínculo imediatamente, sem solicitação de cadastro.
+- **Cadastro administrativo de alunos e avaliadores.** Em *Pessoas e permissões*, administradores criam o acesso de um **aluno** ou de um **avaliador** com e-mail e senha e ativam o vínculo imediatamente, sem solicitação de cadastro. Alunos cadastrados já ficam disponíveis para serem vinculados a projetos.
 - **Rubricas por critério.** Peso, escala de notas (mínimo e máximo) e descritores por faixa de nota.
 - **Avaliação.** Cada avaliador atribui notas por critério, revisa antes de enviar e recebe um recibo com protocolo. Cada projeto só pode ser avaliado uma vez por avaliador em cada banca.
+- **Situação dos projetos.** Na tela de avaliação, cada projeto aparece com o selo **Avaliado** ou **Pendente**, com contador, barra de progresso e filtro (todos, pendentes, avaliados). Nas bancas do avaliador o andamento também aparece por banca, e a gestão vê, no detalhe da banca, quantas avaliações cada projeto já recebeu.
+- **Confirmação de envio.** Depois de enviar, o avaliador vê a mensagem *Avaliação salva com sucesso* com o protocolo e pode seguir direto para o próximo projeto pendente.
+- **Sem avaliações duplicadas.** A regra (uma avaliação por projeto, por avaliador, em cada banca) é garantida em três camadas: índice único e verificação na função `enviar_avaliacao` do banco, resposta 409 da API e, na tela, projeto avaliado sem formulário e botão de envio travado enquanto a requisição está em andamento. Se a duplicidade vier de outro aparelho, a lista é atualizada sozinha.
 - **Ranking ponderado.** A pontuação é a média ponderada por critério. O desempate usa a maior nota média no critério de maior peso; se o empate persistir, ele é exibido como tal.
 - **Resultados e pódio.** Publicação do resultado, "modo pódio" com animação (e som opcional) e exportação em `.xlsx`.
 - **Dashboard** com indicadores e gráficos por período e por status.
@@ -26,7 +29,7 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 | Visitante | Landing, solicitação de acesso, login, recuperação de senha |
 | Pendente / Recusado | Tela de situação da conta |
 | Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela); gestão das instituições; cadastro de projetos direto da plataforma, escolhendo a universidade |
-| Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões, critérios (criar e **renomear** instrumentos), auditoria |
+| Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões (incluindo **cadastro direto de alunos e avaliadores**), critérios (criar e **renomear** instrumentos), auditoria |
 | Coordenador | **Painel**, **bancas** (organizar eventos), **avaliadores** (designar por banca e acompanhar notas), **resultados** (ranking, correção de notas, exportação, publicação) e projetos |
 | Orientador | **Acompanhamento** dos projetos vinculados a ele: equipe e integrantes, situação e participação em bancas (somente leitura) |
 | Aluno | Apenas os projetos em que é integrante. Não há área de bancas, resultados nem dashboard |
@@ -74,7 +77,10 @@ src/
 ├── state/
 │   ├── AppContext.jsx   # estado global, menus por papel, cálculo do ranking
 │   └── seed.js          # dados de demonstração
-└── styles/global.css    # tokens de design e estilos de todos os componentes
+└── styles/
+    ├── global.css        # tokens de design e estilos de todos os componentes
+    ├── avaliacao.css     # situação dos projetos (avaliado/pendente) e barra de progresso
+    └── responsivo.css    # ajustes para celular, tablet e impressão
 ```
 
 As páginas em `pages/` são apresentacionais: recebem dados e callbacks por props. Toda a ligação com o estado fica em `routes/telas.jsx`, o que facilita trocar os dados em memória por chamadas a uma API.
@@ -101,7 +107,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 - Ícones em traço (`components/Icon.jsx`), sem dependência externa. O símbolo de ranking é um pódio.
 - Foco visível, link "Pular para o conteúdo", modal com foco gerenciado, tabelas roláveis por teclado e status que não dependem só da cor.
 - Respeita `prefers-reduced-motion` (sem animações e sem confete).
-- Responsivo: o menu lateral vira gaveta em telas até 860px.
+- Responsivo (`styles/responsivo.css`): menu lateral fixo no computador, mais estreito em tablets largos e em gaveta até 860px; no celular (até 640px) as tabelas viram cartões com rótulo em cada campo, as janelas viram folhas ancoradas na base, o botão de envio da avaliação fica fixo no rodapé, os alvos de toque têm cerca de 44px e as áreas seguras de aparelhos com entalhe são respeitadas. O recibo também tem layout próprio para impressão.
 
 ## Backend e Supabase
 
@@ -144,7 +150,7 @@ Com a API rodando e o seed aplicado:
 npm test
 ```
 
-Cobrem sessão ausente, CSRF, conta pendente, troca de instituição e de ID, permissões por papel, avaliação duplicada, avaliador não designado e nota fora da escala.
+Cobrem sessão ausente, CSRF, conta pendente, troca de instituição e de ID, permissões por papel, avaliação duplicada, avaliador não designado, nota fora da escala e cadastro direto de alunos pelo administrador (papéis permitidos, e-mail repetido, acesso negado a quem não é administrador).
 
 ### 6. Teste de compatibilidade SQL ↔ backend (sem banco)
 
@@ -171,7 +177,7 @@ Lê `supabase/migrations/*.sql` e confere se toda tabela, coluna, relacionamento
 | `GET /api/instituicoes/publicas` | pública |
 | `GET /api/estado` | autenticado (dados filtrados por papel) |
 | `POST/PUT /api/instituicoes`, `PATCH /api/instituicoes/:id/status` | superadmin |
-| `POST /api/usuarios` | administrador; cadastra avaliador com vínculo ativo |
+| `POST /api/usuarios` | administrador; cadastra **aluno** ou **avaliador** (`papel`, padrão `avaliador`) com vínculo ativo |
 | `POST /api/solicitacoes/:usuarioId/aprovar` e `/recusar` | administrador |
 | `PATCH /api/usuarios/:usuarioId/papel` e `/bloqueio`, `DELETE /api/usuarios/:usuarioId/vinculo` | administrador |
 | `POST /api/projetos`, `PUT /api/projetos/:id` | administrador, coordenador; superadmin também pela plataforma (informa `instituicaoId`) |

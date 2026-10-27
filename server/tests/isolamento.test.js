@@ -107,4 +107,28 @@ describe("isolamento institucional e autorização", () => {
   test("superadmin sem instituição selecionada não aprova solicitações", async () => {
     assert.equal((await chamar(ctx.super, "POST", "/solicitacoes/1/aprovar")).status, 403);
   });
+
+  test("administrador cadastra aluno com acesso já ativo", async () => {
+    const email = `aluno.${Date.now()}@teste.com`;
+    const criado = await chamar(ctx.admin, "POST", "/usuarios", { corpo: { nome: "Aluno de Teste", email, senha: "12345678", papel: "aluno" }, instituicao: ctx.ucsal });
+    assert.equal(criado.status, 201);
+    assert.equal(criado.dados.papel, "aluno");
+    const estado = (await chamar(ctx.admin, "GET", "/estado", { instituicao: ctx.ucsal })).dados.db;
+    const pessoa = estado.usuarios.find((u) => u.id === criado.dados.id);
+    assert.ok(pessoa?.vinculos.some((v) => v.instituicaoId === ctx.ucsal && v.papel === "aluno" && v.situacao === "ativo"));
+    const repetido = await chamar(ctx.admin, "POST", "/usuarios", { corpo: { nome: "Aluno de Teste", email, senha: "12345678", papel: "aluno" }, instituicao: ctx.ucsal });
+    assert.equal(repetido.status, 409);
+    const entrada = await fetch(`${BASE}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": "1" }, body: JSON.stringify({ email, senha: "12345678" }) });
+    assert.equal(entrada.status, 200);
+  });
+
+  test("cadastro direto só aceita aluno ou avaliador", async () => {
+    const corpo = { nome: "Alguém", email: `x.${Date.now()}@teste.com`, senha: "12345678", papel: "administrador" };
+    assert.equal((await chamar(ctx.admin, "POST", "/usuarios", { corpo, instituicao: ctx.ucsal })).status, 400);
+  });
+
+  test("avaliador não cadastra pessoas", async () => {
+    const corpo = { nome: "Alguém", email: `y.${Date.now()}@teste.com`, senha: "12345678", papel: "aluno" };
+    assert.equal((await chamar(ctx.rafael, "POST", "/usuarios", { corpo, instituicao: ctx.ucsal })).status, 403);
+  });
 });
