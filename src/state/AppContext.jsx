@@ -143,6 +143,18 @@ export function AppProvider({ children }) {
     },
     instituicoesPublicas: () => api.get("/instituicoes/publicas"),
 
+    async entrarPorLinkAvaliacao(token, usuarioId) {
+      try {
+        const acesso = await api.post(`/acesso-avaliacao/${encodeURIComponent(token)}/entrar`, { usuarioId: Number(usuarioId) });
+        escolher(acesso.instituicaoId);
+        await carregar();
+        return { destino: `/minhas-bancas/${acesso.bancaId}/avaliar?projeto=${acesso.projetoId}` };
+      } catch (e) {
+        return { erro: e.message };
+      }
+    },
+    consultarLinkAvaliacao: (token) => api.get(`/acesso-avaliacao/${encodeURIComponent(token)}`),
+
     async salvarInstituicao(dados, id) {
       const r = await acao(() => (id ? api.put(`/instituicoes/${id}`, dados) : api.post("/instituicoes", dados)), { silencioso: true });
       return r.erro ? { erros: r.campos || { nome: r.erro } } : { ok: true };
@@ -154,6 +166,7 @@ export function AppProvider({ children }) {
     alterarPapel: (userId, novo) => acao(() => api.patch(`/usuarios/${userId}/papel`, { papel: novo })),
     bloquear: (userId, bloquear) => acao(() => api.patch(`/usuarios/${userId}/bloqueio`, { bloquear })),
     revogar: (userId) => acao(() => api.del(`/usuarios/${userId}/vinculo`)),
+    cadastrarAvaliador: (dados) => acao(() => api.post("/usuarios", dados), { silencioso: true }),
     novoInstrumento: (nome, descricao) => acao(() => api.post("/instrumentos", { nome, descricao }), { silencioso: true }),
     editarInstrumento: (id, nome, descricao) => acao(() => api.put(`/instrumentos/${id}`, { nome, descricao }), { silencioso: true }),
     salvarCriterio: (instrumentoId, criterio) => acao(() => api.post(`/instrumentos/${instrumentoId}/criterios`, {
@@ -176,6 +189,10 @@ export function AppProvider({ children }) {
       return id ? api.put(`/bancas/${id}`, corpo) : api.post("/bancas", corpo);
     }),
     designarAvaliadores: (bancaId, avaliadoresIds) => acao(() => api.put(`/bancas/${bancaId}/avaliadores`, { avaliadoresIds }), { silencioso: true }),
+    gerarLinkAvaliacao: (bancaId, projetoId, avaliadorId) => acao(
+      () => api.post(`/bancas/${bancaId}/projetos/${projetoId}/acesso`, { avaliadorId }),
+      { silencioso: true },
+    ),
     publicarResultado: (bancaId) => acao(() => api.post(`/bancas/${bancaId}/publicar`)),
 
     alterarNota: (avaliacaoId, criterioId, nova, justificativa) =>

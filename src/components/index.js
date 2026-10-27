@@ -22,4 +22,5 @@ export { default as Select } from "./Select";
 export { default as Sidebar } from "./Sidebar";
 export { default as StatCard } from "./StatCard";
 export { default as Textarea } from "./Textarea";
+export { default as ProjetoAcessoRapido } from "./ProjetoAcessoRapido";
 export { default as MotionRoot, SplitText, CountUp } from "./Motion";

@@ -3,6 +3,7 @@ export { default as LoginPage } from "./publicas/LoginPage";
 export { default as SolicitarCadastroPage } from "./publicas/SolicitarCadastroPage";
 export { default as RecuperarSenhaPage } from "./publicas/RecuperarSenhaPage";
 export { default as ContaPendentePage } from "./publicas/ContaPendentePage";
+export { default as AcessoAvaliacaoPage } from "./publicas/AcessoAvaliacaoPage";
 export { default as ErroPage } from "./publicas/ErroPage";
 export { default as InstituicoesPage } from "./superadmin/InstituicoesPage";
 export { default as InstituicaoFormPage } from "./superadmin/InstituicaoFormPage";

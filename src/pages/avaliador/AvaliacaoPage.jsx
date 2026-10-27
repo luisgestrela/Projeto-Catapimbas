@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { PageHeader, Card, Select, RatingInput, Button, Modal } from "../../components";
+import { PageHeader, Card, Select, RatingInput, Button, Modal, ProjetoAcessoRapido } from "../../components";
 
-export default function AvaliacaoPage({ banca = {}, projetos = [], criterios = [], erro, onSubmit }) {
-  const [projetoId, setProjetoId] = useState("");
+export default function AvaliacaoPage({ banca = {}, projetos = [], criterios = [], projetoInicialId = "", erro, onSubmit }) {
+  const [projetoId, setProjetoId] = useState(projetoInicialId ? String(projetoInicialId) : "");
   const [notas, setNotas] = useState({});
   const [confirmando, setConfirmando] = useState(false);
 
@@ -22,6 +22,7 @@ export default function AvaliacaoPage({ banca = {}, projetos = [], criterios = [
         <Select label="Projeto" name="projeto" placeholder="Selecione o projeto" value={projetoId} onChange={trocarProjeto}
           options={projetos.map((p) => ({ value: p.id, label: p.jaAvaliado ? `${p.nome} (já avaliado)` : p.nome }))} />
       </Card>
+      {projeto && <ProjetoAcessoRapido projetoId={projeto.id} projetoNome={projeto.nome} />}
       {projeto?.jaAvaliado && <div className="alert">Você já enviou a avaliação deste projeto. Para corrigir, solicite uma edição ao coordenador.</div>}
       {projeto && !projeto.jaAvaliado && (
         <div className="stack">

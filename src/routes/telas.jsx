@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, EmptyState, PageHeader } from "../components";
 import * as P from "../pages";
 import { api } from "../lib/api";
@@ -56,6 +56,7 @@ const nomeInstituicao = (db, id) => db.instituicoes.find((i) => i.id === id)?.no
 export function Login() {
   const app = useApp();
   const nav = useNavigate();
+  const location = useLocation();
   const [erro, setErro] = useState("");
   const dica = (
     <details className="field-hint">
@@ -74,7 +75,11 @@ export function Login() {
   );
   return <P.LoginPage dica={dica} erro={erro} onSubmit={async ({ email, senha }) => {
     const r = await app.login(email, senha);
-    if (r.erro) setErro(r.erro); else nav(r.destino, { replace: true });
+    if (r.erro) setErro(r.erro);
+    else {
+      const destino = location.state?.from || r.destino;
+      nav(destino, { replace: true });
+    }
   }} />;
 }
 
@@ -91,6 +96,28 @@ export function Recuperar() {
   const app = useApp();
   const [enviado, setEnviado] = useState(false);
   return <P.RecuperarSenhaPage enviado={enviado} onSubmit={async (email) => { await app.recuperarSenha(email); setEnviado(true); }} />;
+}
+
+export function AcessoAvaliacao() {
+  const app = useApp();
+  const nav = useNavigate();
+  const { token } = useParams();
+  const [acesso, setAcesso] = useState(null);
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  useEffect(() => {
+    let ativo = true;
+    app.consultarLinkAvaliacao(token).then((dados) => { if (ativo) setAcesso(dados); })
+      .catch((e) => { if (ativo) setErro(e.message); });
+    return () => { ativo = false; };
+  }, [app, token]);
+  return <P.AcessoAvaliacaoPage acesso={acesso} erro={erro} carregando={carregando}
+    onEntrar={async (usuarioId) => {
+      setCarregando(true);
+      const r = await app.entrarPorLinkAvaliacao(token, usuarioId);
+      if (r.erro) { setErro(r.erro); setCarregando(false); return; }
+      nav(r.destino, { replace: true });
+    }} />;
 }
 
 export function ContaPendente() {
@@ -151,6 +178,7 @@ export function Pessoas() {
     .map((v) => ({ id: u.id, nome: u.nome, email: u.email, papel: v.papel, situacao: v.situacao })));
   const proprio = (v) => v.id === app.usuario.id && window.alert("Você não pode alterar o seu próprio acesso.") === undefined;
   return <P.PessoasPermissoesPage vinculos={vinculos}
+    onCadastrarAvaliador={app.cadastrarAvaliador}
     onAlterarPapel={(v, p) => !proprio(v) && app.alterarPapel(v.id, p)}
     onBloquear={(v, b) => !proprio(v) && app.bloquear(v.id, b)}
     onRevogar={(v) => !proprio(v) && window.confirm(`Revogar o acesso de ${v.nome}?`) && app.revogar(v.id)} />;
@@ -241,9 +269,12 @@ export function ProjetoDetalhe() {
   // A participação em bancas aparece para quem acompanha ou organiza (não para o aluno).
   const mostraBancas = app.instId && app.papel !== "aluno";
   const bancas = mostraBancas ? app.db.bancas.filter((b) => b.projetosIds.includes(p.id))
-    .map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b) })) : undefined;
+    .map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b),
+      avaliadores: b.avaliadoresIds.map((uid) => ({ id: uid, nome: nomeUsuario(app.db, uid) })) })) : undefined;
   return <P.ProjetoDetalhePage projeto={{ ...p, orientador: nomeUsuario(app.db, p.orientadorId), integrantes, bancas, instituicao: app.papel === "superadmin" ? nomeInstituicao(app.db, p.instituicaoId) : "" }}
-    podeEditar={podeEditarProjeto(app)} onEditar={() => nav(`/projetos/${p.id}/editar`)} onVoltar={() => nav("/projetos")} />;
+    podeEditar={podeEditarProjeto(app)} podeGerarAcesso={gerencia(app.papel)}
+    onGerarLink={(bancaId, avaliadorId) => app.gerarLinkAvaliacao(bancaId, p.id, avaliadorId)}
+    onEditar={() => nav(`/projetos/${p.id}/editar`)} onVoltar={() => nav("/projetos")} />;
 }
 
 export function ProjetoForm() {
@@ -489,6 +520,7 @@ export function Avaliacao() {
   const app = useApp();
   const nav = useNavigate();
   const { id } = useParams();
+  const [params] = useSearchParams();
   const [erro, setErro] = useState("");
   const b = bancaDoAvaliador(app, id);
   if (!b || statusBanca(b) !== "aberta") return <SemAcesso texto="Esta banca não está aberta para você avaliar." />;
@@ -497,7 +529,7 @@ export function Avaliacao() {
   const projetos = b.projetosIds.map((pid) => db.projetos.find((p) => p.id === pid)).filter(Boolean)
     .map((p) => ({ id: p.id, nome: p.nome, jaAvaliado: jaFeitas.includes(p.id) }));
   const criterios = b.criterios || [];
-  return <P.AvaliacaoPage banca={b} projetos={projetos} criterios={criterios} erro={erro}
+  return <P.AvaliacaoPage banca={b} projetos={projetos} criterios={criterios} projetoInicialId={params.get("projeto") || ""} erro={erro}
     onSubmit={async ({ projetoId, notas }) => {
       if (jaFeitas.includes(Number(projetoId))) return setErro("Você já avaliou este projeto nesta banca.");
       const r = await app.enviarAvaliacao(b.id, projetoId, notas);

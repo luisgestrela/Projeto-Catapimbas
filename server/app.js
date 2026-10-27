@@ -7,6 +7,7 @@ import { config } from "./config.js";
 import { montarEstado } from "./estado.js";
 import authRotas from "./routes/auth.js";
 import avaliacoesRotas from "./routes/avaliacoes.js";
+import acessoAvaliacaoRotas from "./routes/acesso-avaliacao.js";
 import bancasRotas from "./routes/bancas.js";
 import criteriosRotas from "./routes/criterios.js";
 import instituicoesRotas from "./routes/instituicoes.js";
@@ -52,6 +53,7 @@ app.use("/api", (req, _res, next) => {
 
 app.use("/api/auth", authRotas);
 app.use("/api/instituicoes", instituicoesRotas);
+app.use("/api/acesso-avaliacao", acessoAvaliacaoRotas);
 
 app.use("/api", autenticar, contexto);
 

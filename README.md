@@ -9,6 +9,9 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 - **Várias instituições, dados separados.** Cada instituição vê apenas os próprios projetos, bancas e resultados. Uma pessoa pode ter papéis diferentes em instituições diferentes e alternar entre elas.
 - **Cadastro com aprovação.** O visitante solicita acesso e o administrador aprova ou recusa (com justificativa).
 - **Projetos e bancas.** Cadastro, filtros, paginação, detalhes, equipes e avaliadores designados.
+- **Acesso rápido aos projetos.** Cada projeto possui link direto copiável e QR Code para compartilhamento com avaliadores; o destino é preservado após o login.
+- **Links individuais de avaliação.** Administradores e coordenadores podem gerar um link temporário, vinculado a uma banca, projeto e avaliador. O token é armazenado apenas como hash, expira em 2 horas, é consumido uma única vez e cria a sessão do avaliador para levá-lo diretamente à avaliação.
+- **Cadastro administrativo de avaliadores.** Administradores podem criar o acesso do avaliador com e-mail e senha e ativar o vínculo imediatamente, sem solicitação de cadastro.
 - **Rubricas por critério.** Peso, escala de notas (mínimo e máximo) e descritores por faixa de nota.
 - **Avaliação.** Cada avaliador atribui notas por critério, revisa antes de enviar e recebe um recibo com protocolo. Cada projeto só pode ser avaliado uma vez por avaliador em cada banca.
 - **Ranking ponderado.** A pontuação é a média ponderada por critério. O desempate usa a maior nota média no critério de maior peso; se o empate persistir, ele é exibido como tal.
@@ -89,7 +92,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 | `/bancas`, `/bancas/:id`, `/bancas/:id/resultados`, `/bancas/:id/podio` | Administrador e coordenador |
 | `/acompanhamento` | Orientador |
 | `/aprovacoes`, `/pessoas`, `/criterios`, `/auditoria` | Administrador |
-| `/inicio`, `/minhas-bancas`, `/minhas-bancas/:id/avaliar`, `/minhas-bancas/:id/recibo/:avaliacaoId` | Avaliador |
+| `/inicio`, `/minhas-bancas`, `/minhas-bancas/:id/avaliar`, `/minhas-bancas/:id/recibo/:avaliacaoId` | Avaliador; a tela de avaliação também mostra o link e QR Code do projeto selecionado |
 
 ## Design e acessibilidade
 
@@ -104,7 +107,7 @@ As páginas em `pages/` são apresentacionais: recebem dados e callbacks por pro
 
 ### 1. Criar o banco
 
-No projeto Supabase, abra **SQL Editor** e execute, **nesta ordem**, `supabase/migrations/20261021000000_schema.sql` e `supabase/migrations/20261021000100_backend_colunas.sql` e, depois, `supabase/migrations/20261022000000_fluxos_por_perfil.sql` (ou use `supabase db push` com a CLI, que aplica todas na ordem do nome do arquivo). A terceira migração ajusta as permissões por perfil (aluno sem bancas/resultados; orientador somente leitura) e cria a função `designar_avaliadores`, usada pelo coordenador. A segunda migração é aditiva e idempotente: só adiciona colunas usadas pelo backend (`usuario.ultimo_login_em`, `tentativas_login_falhas`, `bloqueado_ate`, `anonimizado_em` e `auditoria.ip`). A migração cria tabelas, restrições (PK, FK compostas com `instituicao_id`, UNIQUE, CHECK), índices, gatilhos, funções transacionais (`salvar_projeto`, `salvar_banca`, `salvar_criterio`, `enviar_avaliacao`, `corrigir_nota`, `publicar_resultado`), papéis/permissões iniciais e habilita RLS em todas as tabelas sem políticas para `anon`/`authenticated`. Somente a API, com a chave `service_role`, acessa os dados.
+No projeto Supabase, abra **SQL Editor** e execute, **nesta ordem**, `supabase/migrations/20261021000000_schema.sql` e `supabase/migrations/20261021000100_backend_colunas.sql` e, depois, `supabase/migrations/20261022000000_fluxos_por_perfil.sql` (ou use `supabase db push` com a CLI, que aplica todas na ordem do nome do arquivo). A terceira migração ajusta as permissões por perfil (aluno sem bancas/resultados; orientador somente leitura) e cria a função `designar_avaliadores`, usada pelo coordenador. A migração `20261027000000_acesso_avaliacao_token.sql` cria os tokens individuais de acesso às avaliações e deve ser aplicada depois das migrações anteriores. A segunda migração é aditiva e idempotente: só adiciona colunas usadas pelo backend (`usuario.ultimo_login_em`, `tentativas_login_falhas`, `bloqueado_ate`, `anonimizado_em` e `auditoria.ip`). A migração cria tabelas, restrições (PK, FK compostas com `instituicao_id`, UNIQUE, CHECK), índices, gatilhos, funções transacionais (`salvar_projeto`, `salvar_banca`, `salvar_criterio`, `enviar_avaliacao`, `corrigir_nota`, `publicar_resultado`), papéis/permissões iniciais e habilita RLS em todas as tabelas sem políticas para `anon`/`authenticated`. Somente a API, com a chave `service_role`, acessa os dados.
 
 ### 2. Configurar variáveis
 
@@ -168,6 +171,7 @@ Lê `supabase/migrations/*.sql` e confere se toda tabela, coluna, relacionamento
 | `GET /api/instituicoes/publicas` | pública |
 | `GET /api/estado` | autenticado (dados filtrados por papel) |
 | `POST/PUT /api/instituicoes`, `PATCH /api/instituicoes/:id/status` | superadmin |
+| `POST /api/usuarios` | administrador; cadastra avaliador com vínculo ativo |
 | `POST /api/solicitacoes/:usuarioId/aprovar` e `/recusar` | administrador |
 | `PATCH /api/usuarios/:usuarioId/papel` e `/bloqueio`, `DELETE /api/usuarios/:usuarioId/vinculo` | administrador |
 | `POST /api/projetos`, `PUT /api/projetos/:id` | administrador, coordenador; superadmin também pela plataforma (informa `instituicaoId`) |

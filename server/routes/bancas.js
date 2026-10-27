@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import { exigeInstituicao, exigePermissao, temPermissao } from "../auth.js";
 import { gerarXlsx } from "../../src/utils/xlsx.js";
@@ -40,6 +41,33 @@ r.put("/:id/avaliadores", exigePermissao("banca:gerir"), async (req, res) => {
   const id = inteiro(req.params.id, "id");
   await rpc("designar_avaliadores", { p_inst: req.instituicaoId, p_banca: id, p_avaliadores: listaIds(req.body?.avaliadoresIds, "avaliadoresIds"), p_ator: req.usuario.id });
   res.json({ id });
+});
+
+// Gera um link individual, vinculado a um avaliador, banca e projeto. O token puro
+// só é devolvido nesta resposta e o banco guarda apenas o hash SHA-256.
+r.post("/:id/projetos/:projetoId/acesso", exigePermissao("banca:gerir"), async (req, res) => {
+  const bancaId = inteiro(req.params.id, "id");
+  const projetoId = inteiro(req.params.projetoId, "projetoId");
+  const avaliadorId = inteiro(req.body?.avaliadorId, "avaliadorId");
+  const bancaProjeto = await consultar(
+    supabase.from("banca_projeto").select("id").eq("banca_id", bancaId).eq("projeto_id", projetoId).eq("instituicao_id", req.instituicaoId).maybeSingle(),
+  );
+  if (!bancaProjeto) throw new ErroHttp(404, "Projeto não pertence a esta banca.");
+  const vinculo = await consultar(
+    supabase.from("vinculo_institucional").select("id, situacao, papel").eq("usuario_id", avaliadorId).eq("instituicao_id", req.instituicaoId).maybeSingle(),
+  );
+  if (!vinculo || vinculo.situacao !== "ativo" || vinculo.papel !== "avaliador") throw new ErroHttp(404, "Avaliador não encontrado nesta instituição.");
+  const designacao = await consultar(
+    supabase.from("banca_avaliador").select("id").eq("banca_id", bancaId).eq("vinculo_id", vinculo.id).eq("instituicao_id", req.instituicaoId).maybeSingle(),
+  );
+  if (!designacao) throw new ErroHttp(403, "O avaliador não está designado para esta banca.");
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiraEm = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+  await consultar(supabase.from("avaliacao_acesso").insert({
+    instituicao_id: req.instituicaoId, banca_id: bancaId, projeto_id: projetoId, avaliador_id: avaliadorId,
+    token_hash: crypto.createHash("sha256").update(token).digest("hex"), criado_por: req.usuario.id, expira_em: expiraEm,
+  }));
+  res.status(201).json({ token, expiraEm });
 });
 
 async function carregarVisivel(req) {

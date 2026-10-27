@@ -72,7 +72,7 @@ function SoDeslogado({ children }) {
 }
 
 const GESTAO = ["administrador", "coordenador"];
-const INSTITUCIONAL = ["administrador", "coordenador", "orientador", "aluno"];
+const INSTITUCIONAL = ["administrador", "coordenador", "orientador", "aluno", "avaliador"];
 
 export default function AppRoutes() {
   return (
@@ -82,6 +82,7 @@ export default function AppRoutes() {
       <Route path="/cadastro" element={<SoDeslogado><T.Cadastro /></SoDeslogado>} />
       <Route path="/recuperar-senha" element={<SoDeslogado><T.Recuperar /></SoDeslogado>} />
       <Route path="/conta-pendente" element={<T.ContaPendente />} />
+      <Route path="/acesso-avaliacao/:token" element={<T.AcessoAvaliacao />} />
 
       <Route element={<Shell exigeInstituicao={false} />}>
         <Route path="/trocar-instituicao" element={<T.TrocarInstituicao />} />

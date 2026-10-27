@@ -1,7 +1,7 @@
 import { formatarData } from "../../utils/filtroProjetos";
-import { PageHeader, Card, Badge, DataTable, Button } from "../../components";
+import { PageHeader, Card, Badge, DataTable, Button, ProjetoAcessoRapido } from "../../components";
 
-export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, onEditar, onVoltar }) {
+export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, podeGerarAcesso = false, onGerarLink, onEditar, onVoltar }) {
   const colunas = [
     { key: "nome", header: "Nome" },
     { key: "funcao", header: "Função" },
@@ -12,6 +12,7 @@ export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, o
     <>
       <PageHeader title={projeto.nome || "Projeto"} subtitle={`${projeto.ano || ""}/${projeto.semestre || ""}${projeto.instituicao ? ` · ${projeto.instituicao}` : ""}`}
         actions={<><Button variant="secondary" onClick={onVoltar}>Voltar</Button>{podeEditar && <Button onClick={onEditar}>Editar</Button>}</>} />
+      <ProjetoAcessoRapido projetoId={projeto.id} projetoNome={projeto.nome} bancas={projeto.bancas} podeGerar={podeGerarAcesso} onGerarLink={onGerarLink} />
       <Card title="Resumo" actions={<Badge status={projeto.status} />}>
         <p>{projeto.descricao || "Sem descrição."}</p>
         <p><strong>Orientador:</strong> {projeto.orientador || "—"}</p>

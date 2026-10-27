@@ -556,3 +556,21 @@ body.modo-palco .topbar, body.modo-palco .sidebar, body.modo-palco .scroll-progr
 .field-label { font-weight: 600; font-size: var(--text-sm); }
 .pessoa-inst { color: var(--muted); font-size: var(--text-sm); }
 .check-lista { max-height: 16rem; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .35rem .75rem; }
+
+/* ---------- acesso rápido a projetos ---------- */
+.quick-access-card { background: linear-gradient(135deg, var(--surface), var(--primary-50)); }
+.quick-access { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.access-warning { background: var(--info-bg); color: var(--info); border-color: rgba(45, 66, 178, .25); }
+.project-qr { width: 176px; height: 176px; object-fit: contain; padding: .5rem; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); flex: none; }
+.project-qr-loading { display: grid; place-items: center; color: var(--muted); font-size: var(--text-sm); text-align: center; }
+.quick-access-copy { min-width: min(100%, 360px); flex: 1; }
+.quick-access-generator { display: grid; gap: .75rem; margin: .9rem 0; padding: .85rem; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255, 255, 255, .72); }
+.quick-link-field { margin: .75rem 0; }
+.quick-link-field input { font-size: var(--text-sm); }
+.evaluator-form { max-width: 900px; }
+.evaluator-form-actions { align-items: end; }
+.evaluator-form-actions .field { flex: 1; min-width: min(100%, 260px); }
+@media (max-width: 560px) {
+  .project-qr { width: 150px; height: 150px; }
+  .quick-access { align-items: flex-start; }
+}
