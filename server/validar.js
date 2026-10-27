@@ -15,6 +15,14 @@ export function inteiro(valor, campo, { min = 1, max = Number.MAX_SAFE_INTEGER }
   return n;
 }
 
+// Data opcional no formato AAAA-MM-DD. Vazia vira "" (o banco usa a data atual ao cadastrar e mantém a anterior ao editar).
+export function dataIso(valor, campo) {
+  const s = String(valor ?? "").trim();
+  if (!s) return "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s))) throw invalido(`Campo inválido: ${campo}.`, { [campo]: "Use uma data válida." });
+  return s;
+}
+
 export function listaIds(valor, campo) {
   if (valor === undefined || valor === null) return [];
   if (!Array.isArray(valor)) throw invalido(`Campo inválido: ${campo}.`);

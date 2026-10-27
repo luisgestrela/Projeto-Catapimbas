@@ -3,10 +3,11 @@ import { PageHeader, Card, Input, Textarea, Select, Button } from "../../compone
 
 // Formulário de projeto. Cada aluno e orientador aparece com a universidade a que está vinculado.
 // `instituicoes` só é enviado ao superadmin cadastrando pela plataforma: ele escolhe a universidade e a lista de pessoas acompanha.
-export default function ProjetoFormPage({ inicial = {}, orientadores = [], alunos = [], instituicoes, instituicaoPadrao = "", erros = {}, onSubmit, onCancelar }) {
+export default function ProjetoFormPage({ inicial = {}, orientadores = [], alunos = [], instituicoes, instituicaoPadrao = "", erros = {}, cursos = [], onSubmit, onCancelar }) {
   const [f, setF] = useState({
     nome: inicial.nome || "", descricao: inicial.descricao || "", status: inicial.status || "ativo",
     ano: inicial.ano || new Date().getFullYear(), semestre: inicial.semestre || "1",
+    curso: inicial.curso || "", dataRealizacao: inicial.dataRealizacao || new Date().toISOString().slice(0, 10),
     orientadorId: inicial.orientadorId || "", equipe: inicial.equipe || "", alunosIds: inicial.alunosIds || [],
     instituicaoId: String(inicial.instituicaoId || instituicaoPadrao || ""),
   });
@@ -41,6 +42,11 @@ export default function ProjetoFormPage({ inicial = {}, orientadores = [], aluno
             <Select label="Situação" name="status" value={f.status} onChange={set("status")}
               options={[{ value: "ativo", label: "Ativo" }, { value: "arquivado", label: "Arquivado" }]} />
           </div>
+          <div className="grid-4">
+            <Input label="Curso" name="curso" list="lista-cursos" value={f.curso} onChange={set("curso")} error={erros.curso} hint="Ex.: DS (Desenvolvimento de Sistemas)." />
+            <Input label="Data de realização" name="dataRealizacao" type="date" value={f.dataRealizacao} onChange={set("dataRealizacao")} error={erros.dataRealizacao} />
+          </div>
+          <datalist id="lista-cursos">{cursos.map((c) => <option key={c} value={c} />)}</datalist>
           <Input label="Nome da equipe" name="equipe" value={f.equipe} onChange={set("equipe")} />
           <Select label="Orientador" name="orientadorId" placeholder={semInstituicao ? "Escolha a instituição primeiro" : "Selecione"} value={f.orientadorId} onChange={set("orientadorId")}
             disabled={semInstituicao} options={orientadoresLista.map((o) => ({ value: o.id, label: o.instituicao ? `${o.nome} — ${o.instituicao}` : o.nome }))} />

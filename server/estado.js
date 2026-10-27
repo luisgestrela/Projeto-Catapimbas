@@ -42,8 +42,12 @@ export async function vinculosDoUsuario(usuarioId) {
 
 export async function listarProjetos(inst) {
   const filtro = { instituicao_id: inst };
+  // Se a migração 20261026000000 (curso e data de realização) ainda não foi aplicada, lista sem esses campos em vez de derrubar o login.
+  const colunasProjeto = "id, instituicao_id, nome, descricao, ano, semestre, status";
+  const buscarProjetos = () => buscar("projeto", `${colunasProjeto}, curso, data_realizacao`, filtro)
+    .catch(() => buscar("projeto", colunasProjeto, filtro));
   const [projetos, equipes, orientacoes, integrantes] = await Promise.all([
-    buscar("projeto", "id, instituicao_id, nome, descricao, ano, semestre, status", filtro),
+    buscarProjetos(),
     buscar("equipe", "id, projeto_id, nome", filtro),
     buscar("orientacao", "projeto_id, orientador_id", filtro),
     buscar("integrante", "equipe_id, usuario_id", filtro),
@@ -55,6 +59,7 @@ export async function listarProjetos(inst) {
     const eq = equipePorProjeto.get(p.id);
     return {
       id: p.id, instituicaoId: p.instituicao_id, nome: p.nome, descricao: p.descricao || "", status: p.status, ano: p.ano, semestre: p.semestre,
+      curso: p.curso || "", dataRealizacao: p.data_realizacao || "",
       orientadorId: orientadorPorProjeto.get(p.id) ?? null, equipe: eq?.nome || "",
       alunosIds: eq ? (alunosPorEquipe.get(eq.id) || []).map((i) => i.usuario_id) : [],
     };

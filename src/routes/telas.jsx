@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 import { Button, EmptyState, PageHeader } from "../components";
 import * as P from "../pages";
 import { api } from "../lib/api";
+import { filtrarProjetos } from "../utils/filtroProjetos";
 import { obterAudio } from "../utils/musica";
 import { HOME, ROTULO_PAPEL, CRITERIO_DESEMPATE, calcularRanking, periodoBanca, statusBanca, useApp } from "../state/AppContext";
 
@@ -200,26 +201,25 @@ export function Projetos() {
   const [f, setF] = useState({});
   const [pagina, setPagina] = useState(1);
   const { db, papel } = app;
-  const lista = projetosVisiveis(app).filter((p) => {
-    const alunos = p.alunosIds.map((id) => nomeUsuario(db, id)).join(" ");
-    return contem(p.nome, f.nome) && contem(nomeUsuario(db, p.orientadorId), f.orientador) && contem(p.equipe, f.equipe) && contem(alunos, f.aluno)
-      && (!f.ano || p.ano === Number(f.ano)) && (!f.semestre || p.semestre === f.semestre)
-      && (!f.instituicaoId || p.instituicaoId === Number(f.instituicaoId));
-  }).sort((a, b) => {
+  const visiveis = projetosVisiveis(app);
+  const lista = filtrarProjetos(visiveis, f, (id) => nomeUsuario(db, id)).sort((a, b) => {
     const k = f.ordenarPor || "nome";
-    return k === "ano" ? b.ano - a.ano : String(a[k]).localeCompare(String(b[k]));
-  });
+    if (k === "ano") return b.ano - a.ano || b.semestre.localeCompare(a.semestre);
+    if (k === "data") return String(b.dataRealizacao).localeCompare(String(a.dataRealizacao));
+    return String(a[k]).localeCompare(String(b[k]));
+  }).filter((p) => !f.instituicaoId || p.instituicaoId === Number(f.instituicaoId));
+  const cursos = [...new Set(visiveis.map((p) => p.curso).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const total = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
   const atual = Math.min(pagina, total);
   const linhas = lista.slice((atual - 1) * TAM_PAGINA, atual * TAM_PAGINA).map((p) => ({ ...p, orientador: nomeUsuario(db, p.orientadorId), instituicao: nomeInstituicao(db, p.instituicaoId) }));
   const somenteMeus = papel === "aluno" || papel === "orientador";
   const exportar = (ids) => {
     const params = new URLSearchParams();
-    for (const k of ["nome", "orientador", "equipe", "aluno", "ano", "semestre"]) if (f[k]) params.set(k, f[k]);
+    for (const k of ["nome", "busca", "orientador", "equipe", "aluno", "curso", "ano", "semestre", "mes", "dataInicio", "dataFim", "situacao"]) if (f[k]) params.set(k, f[k]);
     if (ids?.length) params.set("ids", ids.join(","));
     api.baixar(`/relatorios/exportacao/projetos?${params}`, "projetos.xlsx").catch((e) => window.alert(e.message));
   };
-  return <P.ProjetosPage projetos={linhas} pagina={atual} totalPaginas={total} onExportar={exportar} totalFiltrado={lista.length}
+  return <P.ProjetosPage projetos={linhas} pagina={atual} totalPaginas={total} onExportar={exportar} totalFiltrado={lista.length} cursos={cursos} totalGeral={visiveis.length}
     instituicoes={papel === "superadmin" ? db.instituicoes : undefined}
     titulo={somenteMeus ? "Meus projetos" : "Projetos"}
     subtitulo={papel === "aluno" ? "Projetos dos quais você é integrante." : papel === "orientador" ? "Projetos vinculados a você como orientador." : "Consulte, filtre e acompanhe os projetos."}
@@ -258,6 +258,7 @@ export function ProjetoForm() {
   const orientadores = pessoasComPapel(app.db, "orientador", filtroInst);
   const alunos = pessoasComPapel(app.db, "aluno", filtroInst);
   return <P.ProjetoFormPage key={id || "novo"} inicial={existente || {}} orientadores={orientadores} alunos={alunos} erros={erros}
+    cursos={[...new Set(projetosVisiveis(app).map((p) => p.curso).filter(Boolean))]}
     instituicoes={naPlataforma ? app.db.instituicoes.filter((i) => i.status === "ativa" || i.id === existente?.instituicaoId) : undefined}
     onCancelar={() => nav(existente ? `/projetos/${existente.id}` : "/projetos")}
     onSubmit={async (f) => {

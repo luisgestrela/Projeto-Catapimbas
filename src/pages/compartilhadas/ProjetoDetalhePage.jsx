@@ -1,3 +1,4 @@
+import { formatarData } from "../../utils/filtroProjetos";
 import { PageHeader, Card, Badge, DataTable, Button } from "../../components";
 
 export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, onEditar, onVoltar }) {
@@ -14,6 +15,8 @@ export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, o
       <Card title="Resumo" actions={<Badge status={projeto.status} />}>
         <p>{projeto.descricao || "Sem descrição."}</p>
         <p><strong>Orientador:</strong> {projeto.orientador || "—"}</p>
+        <p><strong>Curso:</strong> {projeto.curso || "—"}</p>
+        <p><strong>Data de realização:</strong> {formatarData(projeto.dataRealizacao) || "—"}</p>
         <p><strong>Equipe:</strong> {projeto.equipe || "—"}</p>
       </Card>
       <Card title="Integrantes">

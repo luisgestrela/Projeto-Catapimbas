@@ -24,3 +24,20 @@ if (error) {
   process.exit(1);
 }
 console.log(`✔ Conexão com o Supabase OK. Instituições cadastradas: ${count}`);
+
+// Confere se as migrações usadas pelo código já foram aplicadas (causa comum de "Erro interno" na API).
+let pendencias = 0;
+const aviso = (msg) => { pendencias++; console.error(`✖ ${msg}`); };
+
+const perm = await supabase.from("papel_permissao").select("papel_codigo", { count: "exact", head: true });
+if (perm.error) aviso(`Tabela papel_permissao inacessível (${perm.error.message}). Aplique 20261021000000_schema.sql.`);
+else if (!perm.count) aviso("papel_permissao está vazia: todas as rotas protegidas retornarão 403.");
+
+const colunas = await supabase.from("projeto").select("curso, data_realizacao", { head: true });
+if (colunas.error) aviso("projeto.curso/data_realizacao não existem. Aplique supabase/migrations/20261026000000_projeto_curso_data.sql e rode: notify pgrst, 'reload schema';");
+
+const usuarios = await supabase.from("usuario").select("ultimo_login_em, tentativas_login_falhas, bloqueado_ate, anonimizado_em", { head: true });
+if (usuarios.error) aviso("Colunas de login em usuario ausentes. Aplique 20261021000100_backend_colunas.sql.");
+
+if (pendencias) process.exit(1);
+console.log("✔ Tabelas e colunas esperadas pelo backend encontradas.");

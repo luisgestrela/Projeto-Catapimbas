@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { exigePermissao } from "../auth.js";
 import { ErroHttp, consultar, rpc, supabase } from "../supabase.js";
-import { inteiro, listaIds, opcao, texto } from "../validar.js";
+import { dataIso, inteiro, listaIds, opcao, texto } from "../validar.js";
 
 const r = Router();
 
@@ -36,6 +36,8 @@ function dadosProjeto(req) {
     ano: inteiro(b.ano, "ano", { min: 2000, max: 2100 }),
     semestre: opcao(String(b.semestre), "semestre", ["1", "2"]),
     equipe: texto(b.equipe, "equipe", { max: 120, obrigatorio: false }),
+    curso: texto(b.curso, "curso", { max: 80, obrigatorio: false }),
+    dataRealizacao: dataIso(b.dataRealizacao, "dataRealizacao"),
     orientadorId,
     alunosIds: listaIds(b.alunosIds, "alunosIds"),
   };

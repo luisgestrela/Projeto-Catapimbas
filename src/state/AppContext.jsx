@@ -163,7 +163,7 @@ export function AppProvider({ children }) {
     salvarProjeto: (dados, id) => acao(() => {
       const corpo = {
         nome: dados.nome, descricao: dados.descricao, status: dados.status, ano: Number(dados.ano), semestre: String(dados.semestre),
-        equipe: dados.equipe, orientadorId: Number(dados.orientadorId) || null, alunosIds: dados.alunosIds,
+        equipe: dados.equipe, curso: dados.curso, dataRealizacao: dados.dataRealizacao, orientadorId: Number(dados.orientadorId) || null, alunosIds: dados.alunosIds,
         ...(dados.instituicaoId ? { instituicaoId: Number(dados.instituicaoId) } : {}),
       };
       return id ? api.put(`/projetos/${id}`, corpo) : api.post("/projetos", corpo);

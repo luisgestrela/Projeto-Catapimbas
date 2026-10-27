@@ -48,20 +48,20 @@ await consultar(supabase.from("vinculo_institucional").insert(
 ));
 
 const PROJETOS = [
-  [1, "AcolheMãe", "Plataforma de acolhimento e acompanhamento de gestantes em situação de vulnerabilidade.", "ativo", 2026, "2", 4, "Time Acolher", [5, 9]],
-  [1, "InovArt", "Marketplace para artesãos locais venderem para todo o país.", "ativo", 2026, "2", 4, "Artesãos Digitais", [9]],
-  [1, "VANMO", "Aplicativo de mobilidade para transporte alternativo em bairros periféricos.", "ativo", 2026, "2", 4, "Rota Certa", [5]],
-  [1, "HECO", "Gestão de resíduos eletrônicos com pontos de coleta parceiros.", "ativo", 2026, "1", 4, "Eco Tech", [5, 9]],
-  [1, "SalvadorGO!", "Roteiros turísticos colaborativos por bairro.", "ativo", 2026, "1", 13, "Turismo Local", []],
-  [1, "Ecoleta", "Logística reversa para pequenos comércios.", "arquivado", 2026, "1", 13, "Verde Cidade", []],
-  [1, "TeraPet", "Telemedicina veterinária.", "arquivado", 2025, "2", 13, "Pet Care", []],
-  [2, "NovaRota", "Otimização de entregas de última milha.", "ativo", 2026, "2", null, "Rota Nova", []],
+  [1, "AcolheMãe", "Plataforma de acolhimento e acompanhamento de gestantes em situação de vulnerabilidade.", "ativo", 2026, "2", 4, "Time Acolher", [5, 9], "DS", "2026-10-05"],
+  [1, "InovArt", "Marketplace para artesãos locais venderem para todo o país.", "ativo", 2026, "2", 4, "Artesãos Digitais", [9], "ADS", "2026-10-12"],
+  [1, "VANMO", "Aplicativo de mobilidade para transporte alternativo em bairros periféricos.", "ativo", 2026, "2", 4, "Rota Certa", [5], "DS", "2026-09-20"],
+  [1, "HECO", "Gestão de resíduos eletrônicos com pontos de coleta parceiros.", "ativo", 2026, "1", 4, "Eco Tech", [5, 9], "Engenharia de Software", "2026-03-18"],
+  [1, "SalvadorGO!", "Roteiros turísticos colaborativos por bairro.", "ativo", 2026, "1", 13, "Turismo Local", [], "DS", "2026-04-22"],
+  [1, "Ecoleta", "Logística reversa para pequenos comércios.", "arquivado", 2026, "1", 13, "Verde Cidade", [], "ADS", "2026-05-08"],
+  [1, "TeraPet", "Telemedicina veterinária.", "arquivado", 2025, "2", 13, "Pet Care", [], "DS", "2025-10-14"],
+  [2, "NovaRota", "Otimização de entregas de última milha.", "ativo", 2026, "2", null, "Rota Nova", [], "DS", "2026-10-02"],
 ];
 const P = [];
-for (const [inst, nome, descricao, status, ano, semestre, orientador, equipe, alunos] of PROJETOS) {
+for (const [inst, nome, descricao, status, ano, semestre, orientador, equipe, alunos, curso, dataRealizacao] of PROJETOS) {
   P.push(await rpc("salvar_projeto", {
     p_inst: I[inst], p_id: null, p_ator: U[inst === 1 ? 2 : 6],
-    p_dados: { nome, descricao, status, ano, semestre, equipe, orientadorId: orientador ? U[orientador] : null, alunosIds: alunos.map((a) => U[a]) },
+    p_dados: { nome, descricao, status, ano, semestre, equipe, curso, dataRealizacao, orientadorId: orientador ? U[orientador] : null, alunosIds: alunos.map((a) => U[a]) },
   }));
 }
 
