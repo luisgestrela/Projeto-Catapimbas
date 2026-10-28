@@ -2,9 +2,29 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+<<<<<<< HEAD
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://projeto-catapimbas-cm0q.onrender.com/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+=======
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "regions": [
+    "pdx1"
+>>>>>>> ac542ab5ea380b428f90fb670da17e9230859f74
   ],
   "installCommand": "npm install --include=dev"
 }
