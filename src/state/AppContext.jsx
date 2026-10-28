@@ -26,13 +26,13 @@ export const MENUS = {
     { href: "/instituicoes", label: "Instituições" }, { href: "/projetos", label: "Projetos" },
   ],
   administrador: [
-    { href: "/dashboard", label: "Dashboard" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" },
+    { href: "/dashboard", label: "Dashboard" }, { href: "/ranking", label: "Ranking" }, { href: "/projetos", label: "Projetos" }, { href: "/bancas", label: "Bancas" },
     { href: "/aprovacoes", label: "Aprovações" }, { href: "/pessoas", label: "Pessoas e permissões" },
     { href: "/criterios", label: "Critérios" }, { href: "/auditoria", label: "Auditoria" },
   ],
   coordenador: [
     { href: "/painel", label: "Painel" }, { href: "/bancas", label: "Bancas" }, { href: "/avaliadores", label: "Avaliadores" },
-    { href: "/resultados", label: "Resultados" }, { href: "/projetos", label: "Projetos" },
+    { href: "/resultados", label: "Resultados" }, { href: "/ranking", label: "Ranking" }, { href: "/projetos", label: "Projetos" },
   ],
   orientador: [{ href: "/acompanhamento", label: "Acompanhamento" }, { href: "/projetos", label: "Meus projetos" }],
   aluno: [{ href: "/projetos", label: "Meus projetos" }],
@@ -98,7 +98,6 @@ export function AppProvider({ children }) {
 
   const api_ = {
     db, usuario, papel, ehSuperadmin, instituicao, instId, vinculosAtivos, carregando,
-    sessao: { usuarioId: usuario?.id ?? null, instituicaoId },
     logado: !!usuario,
     recarregar: carregar,
 
@@ -170,7 +169,6 @@ export function AppProvider({ children }) {
     cadastrarPessoa: (dados) => acao(() => api.post("/usuarios", {
       nome: dados.nome, email: dados.email, senha: dados.senha, papel: dados.papel || "avaliador",
     }), { silencioso: true }),
-    cadastrarAvaliador: (dados) => api_.cadastrarPessoa({ ...dados, papel: "avaliador" }),
     novoInstrumento: (nome, descricao) => acao(() => api.post("/instrumentos", { nome, descricao }), { silencioso: true }),
     editarInstrumento: (id, nome, descricao) => acao(() => api.put(`/instrumentos/${id}`, { nome, descricao }), { silencioso: true }),
     salvarCriterio: (instrumentoId, criterio) => acao(() => api.post(`/instrumentos/${instrumentoId}/criterios`, {

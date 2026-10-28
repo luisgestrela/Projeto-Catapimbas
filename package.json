@@ -14,7 +14,7 @@
     "seed": "node server/seed.js",
     "usuario": "node server/criar-usuario.js",
     "db:check": "node server/check-connection.js",
-    "test": "node --test server/tests",
+    "test": "node --test \"server/tests/**/*.test.js\"",
     "test:schema": "node --test server/tests/schema-compat.test.js"
   },
   "dependencies": {

@@ -19,7 +19,8 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 - **Sem avaliações duplicadas.** A regra (uma avaliação por projeto, por avaliador, em cada banca) é garantida em três camadas: índice único e verificação na função `enviar_avaliacao` do banco, resposta 409 da API e, na tela, projeto avaliado sem formulário e botão de envio travado enquanto a requisição está em andamento. Se a duplicidade vier de outro aparelho, a lista é atualizada sozinha.
 - **Ranking ponderado.** A pontuação é a média ponderada por critério. O desempate usa a maior nota média no critério de maior peso; se o empate persistir, ele é exibido como tal.
 - **Resultados e pódio.** Publicação do resultado, "modo pódio" com animação (e som opcional) e exportação em `.xlsx`.
-- **Dashboard** com indicadores e gráficos por período e por status.
+- **Dashboard** (administrador) com projetos cadastrados e avaliados, avaliações concluídas e pendentes, andamento por edição, gráficos e a classificação atual. Filtros por ano, semestre, curso e edição do evento (banca). Os números são recarregados do banco ao abrir a tela.
+- **Ranking** (administrador e coordenador) em `/ranking`: classificação por banca, com filtros de curso e período; clicar no projeto abre seus detalhes, incluindo posição, pontuação e avaliações recebidas em cada banca.
 - **Auditoria** de aprovações, notas e permissões.
 
 ## Perfis e acesso
@@ -29,8 +30,8 @@ Plataforma web multi-institucional para **gestão e avaliação de startups e pr
 | Visitante | Landing, solicitação de acesso, login, recuperação de senha |
 | Pendente / Recusado | Tela de situação da conta |
 | Superadministrador | Todas as permissões em qualquer instituição (ao "Entrar" nela); gestão das instituições; cadastro de projetos direto da plataforma, escolhendo a universidade |
-| Administrador | Dashboard, projetos, bancas, aprovações, pessoas e permissões (incluindo **cadastro direto de alunos e avaliadores**), critérios (criar e **renomear** instrumentos), auditoria |
-| Coordenador | **Painel**, **bancas** (organizar eventos), **avaliadores** (designar por banca e acompanhar notas), **resultados** (ranking, correção de notas, exportação, publicação) e projetos |
+| Administrador | Dashboard, ranking, projetos, bancas, aprovações, pessoas e permissões (incluindo **cadastro direto de alunos e avaliadores**), critérios (criar e **renomear** instrumentos), auditoria |
+| Coordenador | **Painel**, **bancas** (organizar eventos), **avaliadores** (designar por banca e acompanhar notas), **ranking e resultados** (classificação, correção de notas, exportação, publicação) e projetos |
 | Orientador | **Acompanhamento** dos projetos vinculados a ele: equipe e integrantes, situação e participação em bancas (somente leitura) |
 | Aluno | Apenas os projetos em que é integrante. Não há área de bancas, resultados nem dashboard |
 | Avaliador | Minhas bancas, avaliação e recibo |

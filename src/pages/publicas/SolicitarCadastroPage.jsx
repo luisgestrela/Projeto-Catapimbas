@@ -19,7 +19,7 @@ export default function SolicitarCadastroPage({ instituicoes = [], onSubmit, err
     if (f.senha.length < 8) return setErroLocal("A senha deve ter pelo menos 8 caracteres.");
     if (f.senha !== f.confirmacao) return setErroLocal("A confirmação não confere com a senha.");
     setErroLocal("");
-    const { confirmacao, ...dados } = f;
+    const { confirmacao: _confirmacao, ...dados } = f;
     onSubmit?.(dados);
   }
 

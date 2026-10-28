@@ -5,6 +5,7 @@ import * as P from "../pages";
 import { api } from "../lib/api";
 import { filtrarProjetos } from "../utils/filtroProjetos";
 import { obterAudio } from "../utils/musica";
+import { calcularPainel, rankingFiltrado } from "../utils/painel";
 import { HOME, ROTULO_PAPEL, CRITERIO_DESEMPATE, calcularRanking, periodoBanca, statusBanca, useApp } from "../state/AppContext";
 
 const TAM_PAGINA = 5;
@@ -207,20 +208,43 @@ export function Auditoria() {
 }
 
 // ---------- Compartilhadas ----------
+const cursosDe = (projetos) => [...new Set(projetos.map((p) => p.curso).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
 export function Dashboard() {
   const app = useApp();
-  const [f, setF] = useState({ ano: "", semestre: "" });
-  const projetos = projetosVisiveis(app).filter((p) => (!f.ano || p.ano === Number(f.ano)) && (!f.semestre || p.semestre === f.semestre));
-  const ids = projetos.map((p) => p.id);
-  const bancas = bancasVisiveis(app).filter((b) => !(f.ano || f.semestre) || b.projetosIds.some((id) => ids.includes(id)));
-  const avs = app.db.avaliacoes.filter((a) => bancas.some((b) => b.id === a.bancaId));
-  const previstas = bancas.filter((b) => statusBanca(b) === "aberta").reduce((s, b) => s + b.projetosIds.length * b.avaliadoresIds.length, 0);
-  const abertasAv = avs.filter((a) => bancas.some((b) => b.id === a.bancaId && statusBanca(b) === "aberta")).length;
-  const agrupar = (fn) => Object.entries(projetos.reduce((m, p) => ({ ...m, [fn(p)]: (m[fn(p)] || 0) + 1 }), {})).map(([nome, valor]) => ({ nome, valor }));
-  return <P.DashboardPage filtros={f} onFiltrar={setF}
-    indicadores={{ projetos: projetos.length, bancas: bancas.length, avaliacoesConcluidas: avs.length, avaliacoesPendentes: Math.max(0, previstas - abertasAv) }}
-    porPeriodo={agrupar((p) => `${p.ano}/${p.semestre}`).sort((a, b) => a.nome.localeCompare(b.nome))}
-    porStatus={agrupar((p) => (p.status === "ativo" ? "Ativo" : "Arquivado"))} />;
+  const nav = useNavigate();
+  const { recarregar } = app;
+  const [f, setF] = useState({ ano: "", semestre: "", curso: "", bancaId: "" });
+  useEffect(() => { recarregar().catch(() => {}); }, [recarregar]);
+  const projetos = projetosVisiveis(app);
+  const bancas = bancasVisiveis(app);
+  const painel = calcularPainel({ projetos, bancas, avaliacoes: app.db.avaliacoes }, f);
+  return <P.DashboardPage filtros={f} onFiltrar={setF} cursos={cursosDe(projetos)} bancas={bancas}
+    indicadores={painel.indicadores} porPeriodo={painel.porPeriodo} porStatus={painel.porStatus} porAvaliacao={painel.porAvaliacao}
+    porBanca={painel.porBanca} ranking={painel.ranking} bancaRanking={painel.bancaRanking}
+    onAbrirProjeto={(id) => nav(`/projetos/${id}`)} onVerRanking={(bancaId) => nav(`/ranking?banca=${bancaId}`)} />;
+}
+
+export function Ranking() {
+  const app = useApp();
+  const nav = useNavigate();
+  const { recarregar } = app;
+  const [params, setParams] = useSearchParams();
+  const [f, setF] = useState({ ano: "", semestre: "", curso: "" });
+  useEffect(() => { recarregar().catch(() => {}); }, [recarregar]);
+  const projetos = projetosVisiveis(app);
+  const bancas = [...bancasVisiveis(app)].sort((a, b) => b.fim.localeCompare(a.fim) || b.id - a.id);
+  const dbRanking = { projetos: app.db.projetos, avaliacoes: app.db.avaliacoes };
+  const padrao = bancas.find((b) => calcularRanking(dbRanking, b).length > 0) || bancas[0];
+  const banca = bancas.find((b) => b.id === Number(params.get("banca"))) || padrao;
+  const linhas = banca ? rankingFiltrado(dbRanking, banca, f) : [];
+  const elegiveis = banca ? banca.projetosIds.filter((id) => !(banca.inelegiveisIds || []).includes(id)) : [];
+  const classificados = new Set(calcularRanking(dbRanking, banca || { projetosIds: [], id: 0 }).map((l) => l.projetoId));
+  return <P.RankingPage bancas={bancas} bancaId={banca ? String(banca.id) : ""} banca={banca} linhas={linhas} cursos={cursosDe(projetos)}
+    semAvaliacao={elegiveis.filter((id) => !classificados.has(id)).length} previstas={banca?.avaliadoresIds.length || 0}
+    filtros={f} criterioDesempate={CRITERIO_DESEMPATE} onFiltrar={setF}
+    onTrocarBanca={(id) => setParams({ banca: id })} onAbrirProjeto={(id) => nav(`/projetos/${id}`)}
+    onAbrirResultados={(id) => nav(`/bancas/${id}/resultados`)} />;
 }
 
 export function Projetos() {
@@ -271,9 +295,19 @@ export function ProjetoDetalhe() {
   const bancas = mostraBancas ? app.db.bancas.filter((b) => b.projetosIds.includes(p.id))
     .map((b) => ({ id: b.id, nome: b.nome, periodo: periodoBanca(b), status: statusBanca(b),
       avaliadores: b.avaliadoresIds.map((uid) => ({ id: uid, nome: nomeUsuario(app.db, uid) })) })) : undefined;
-  return <P.ProjetoDetalhePage projeto={{ ...p, orientador: nomeUsuario(app.db, p.orientadorId), integrantes, bancas, instituicao: app.papel === "superadmin" ? nomeInstituicao(app.db, p.instituicaoId) : "" }}
+  const resultados = gerencia(app.papel) ? app.db.bancas.filter((b) => b.projetosIds.includes(p.id)).map((b) => {
+    const classificacao = calcularRanking(app.db, b);
+    const linha = classificacao.find((l) => l.projetoId === p.id);
+    return {
+      id: b.id, banca: b.nome, periodo: periodoBanca(b), resultado: b.resultado, total: classificacao.length,
+      posicao: linha?.posicao, pontuacao: linha?.pontuacao ?? 0, empatado: !!linha?.empatado,
+      avaliacoes: app.db.avaliacoes.filter((a) => a.bancaId === b.id && a.projetoId === p.id).length, previstas: b.avaliadoresIds.length,
+    };
+  }) : undefined;
+  return <P.ProjetoDetalhePage projeto={{ ...p, orientador: nomeUsuario(app.db, p.orientadorId), integrantes, bancas, resultados, instituicao: app.papel === "superadmin" ? nomeInstituicao(app.db, p.instituicaoId) : "" }}
     podeEditar={podeEditarProjeto(app)} podeGerarAcesso={app.papel === "administrador" || app.papel === "superadmin"}
     onGerarLink={(bancaId, avaliadorId) => app.gerarLinkAvaliacao(bancaId, p.id, avaliadorId)}
+    onVerResultados={(bancaId) => nav(`/bancas/${bancaId}/resultados`)}
     onEditar={() => nav(`/projetos/${p.id}/editar`)} onVoltar={() => nav("/projetos")} />;
 }
 

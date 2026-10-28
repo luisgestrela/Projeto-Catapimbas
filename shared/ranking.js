@@ -1,30 +1,42 @@
 export const CRITERIO_DESEMPATE = "maior nota média no critério de maior peso";
 
-const media = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+const arredondar = (n) => Math.round(n * 1e4) / 1e4;
+const somar = (xs) => [...xs].sort((a, b) => a - b).reduce((s, x) => s + x, 0);
+const media = (xs) => (xs.length ? somar(xs) / xs.length : 0);
+const porPeso = (x, y) => y.peso - x.peso || x.id - y.id;
 
 const ponderada = (a) => {
-  const soma = a.criterios.reduce((s, c) => s + c.peso, 0);
-  return a.criterios.reduce((s, c) => s + (a.notas[c.id] ?? 0) * c.peso, 0) / soma;
+  const total = a.criterios.reduce((s, c) => s + c.peso, 0);
+  if (!total) return 0;
+  return somar(a.criterios.map((c) => (a.notas[c.id] ?? 0) * c.peso)) / total;
+};
+
+const notaDoCriterioPrincipal = (a) => {
+  const principal = [...a.criterios].sort(porPeso)[0];
+  return principal ? a.notas[principal.id] ?? 0 : 0;
 };
 
 export function calcularRanking(db, banca) {
-  const inelegiveis = banca.inelegiveisIds || [];
-  const linhas = banca.projetosIds.filter((pid) => !inelegiveis.includes(pid)).map((pid) => {
-    const avs = db.avaliacoes.filter((a) => a.bancaId === banca.id && a.projetoId === pid);
-    if (!avs.length) return null;
-    const topo = avs.map((a) => a.notas[[...a.criterios].sort((x, y) => y.peso - x.peso)[0].id] ?? 0);
-    return {
-      projetoId: pid,
-      projeto: db.projetos.find((p) => p.id === pid)?.nome ?? "—",
-      pontuacao: media(avs.map(ponderada)),
-      desempate: media(topo),
+  const inelegiveis = new Set(banca.inelegiveisIds || []);
+  const nomes = new Map(db.projetos.map((p) => [p.id, p.nome]));
+  const linhas = [];
+  for (const projetoId of banca.projetosIds) {
+    if (inelegiveis.has(projetoId)) continue;
+    const avs = db.avaliacoes.filter((a) => a.bancaId === banca.id && a.projetoId === projetoId);
+    if (!avs.length) continue;
+    linhas.push({
+      projetoId,
+      projeto: nomes.get(projetoId) ?? "—",
+      pontuacao: arredondar(media(avs.map(ponderada))),
+      desempate: arredondar(media(avs.map(notaDoCriterioPrincipal))),
       avaliacoes: avs.length,
-    };
-  }).filter(Boolean);
-  const chave = (l) => `${l.pontuacao.toFixed(4)}|${l.desempate.toFixed(4)}`;
-  linhas.sort((a, b) => b.pontuacao - a.pontuacao || b.desempate - a.desempate);
-  return linhas.map((l) => {
-    const primeiro = linhas.findIndex((x) => chave(x) === chave(l));
-    return { ...l, posicao: primeiro + 1, empatado: linhas.filter((x) => chave(x) === chave(l)).length > 1 };
-  });
+    });
+  }
+  linhas.sort((a, b) => b.pontuacao - a.pontuacao || b.desempate - a.desempate || a.projeto.localeCompare(b.projeto) || a.projetoId - b.projetoId);
+  const mesmoPlacar = (a, b) => a.pontuacao === b.pontuacao && a.desempate === b.desempate;
+  return linhas.map((l) => ({
+    ...l,
+    posicao: linhas.findIndex((x) => mesmoPlacar(x, l)) + 1,
+    empatado: linhas.filter((x) => mesmoPlacar(x, l)).length > 1,
+  }));
 }

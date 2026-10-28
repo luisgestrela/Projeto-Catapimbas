@@ -1,7 +1,17 @@
 import { formatarData } from "../../utils/filtroProjetos";
 import { PageHeader, Card, Badge, DataTable, Button, ProjetoAcessoRapido } from "../../components";
 
-export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, podeGerarAcesso = false, onGerarLink, onEditar, onVoltar }) {
+const colunasResultados = (onVer) => [
+  { key: "banca", header: "Banca" },
+  { key: "periodo", header: "Período" },
+  { key: "posicao", header: "Posição", render: (r) => (r.posicao ? `${r.posicao}º de ${r.total}${r.empatado ? " (empate)" : ""}` : "—") },
+  { key: "pontuacao", header: "Pontuação", render: (r) => (r.posicao ? r.pontuacao.toFixed(2) : "—") },
+  { key: "avaliacoes", header: "Avaliações", render: (r) => `${r.avaliacoes} de ${r.previstas}` },
+  { key: "resultado", header: "Resultado", render: (r) => <Badge status={r.resultado} /> },
+  { key: "acoes", header: "", render: (r) => <Button variant="secondary" size="sm" onClick={() => onVer?.(r.id)}>Ver resultados</Button> },
+];
+
+export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, podeGerarAcesso = false, onGerarLink, onEditar, onVoltar, onVerResultados }) {
   const colunas = [
     { key: "nome", header: "Nome" },
     { key: "funcao", header: "Função" },
@@ -23,6 +33,11 @@ export default function ProjetoDetalhePage({ projeto = {}, podeEditar = false, p
       <Card title="Integrantes">
         <DataTable columns={colunas} rows={projeto.integrantes || []} emptyTitle="Nenhum integrante associado" />
       </Card>
+      {projeto.resultados && (
+        <Card title="Avaliações e resultados">
+          <DataTable columns={colunasResultados(onVerResultados)} rows={projeto.resultados} emptyTitle="Este projeto ainda não está em nenhuma banca" />
+        </Card>
+      )}
       {projeto.bancas && (
         <Card title="Participação em bancas">
           {projeto.bancas.length === 0 ? <p className="muted">Este projeto ainda não está em nenhuma banca.</p> : (

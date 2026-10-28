@@ -105,6 +105,7 @@ export default function AppRoutes() {
         <Route path="/painel" element={so(["coordenador"], <T.PainelCoordenador />)} />
         <Route path="/avaliadores" element={so(GESTAO, <T.AvaliadoresBancas />)} />
         <Route path="/resultados" element={so(GESTAO, <T.ResultadosBancas />)} />
+        <Route path="/ranking" element={so(GESTAO, <T.Ranking />)} />
         <Route path="/bancas" element={so(GESTAO, <T.Bancas />)} />
         <Route path="/bancas/nova" element={so(GESTAO, <T.BancaForm />)} />
         <Route path="/bancas/:id" element={so(GESTAO, <T.BancaDetalhe />)} />

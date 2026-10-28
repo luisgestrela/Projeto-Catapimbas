@@ -18,6 +18,7 @@ export { default as ProjetoDetalhePage } from "./compartilhadas/ProjetoDetalhePa
 export { default as BancasPage } from "./compartilhadas/BancasPage";
 export { default as BancaFormPage } from "./compartilhadas/BancaFormPage";
 export { default as BancaDetalhePage } from "./compartilhadas/BancaDetalhePage";
+export { default as RankingPage } from "./compartilhadas/RankingPage";
 export { default as ResultadosPage } from "./compartilhadas/ResultadosPage";
 export { default as PodioPage } from "./compartilhadas/PodioPage";
 export { default as TrocarInstituicaoPage } from "./compartilhadas/TrocarInstituicaoPage";
